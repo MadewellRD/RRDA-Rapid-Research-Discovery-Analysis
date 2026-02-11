@@ -15,7 +15,9 @@
     "scan:all": "tsx src/scanners/run.ts all",
     "alerts:test": "tsx test-alerts.ts",
     "alerts:digest": "tsx -e \"import dotenv from 'dotenv'; dotenv.config(); import { AlertOrchestrator } from './src/notifiers/AlertOrchestrator.js'; const a = new AlertOrchestrator(); await a.sendDailyDigest(); import { closePool } from './src/database/pool.js'; await closePool();\"",
-    "alerts:weekly": "tsx -e \"import dotenv from 'dotenv'; dotenv.config(); import { AlertOrchestrator } from './src/notifiers/AlertOrchestrator.js'; const a = new AlertOrchestrator(); await a.sendWeeklyReport(); import { closePool } from './src/database/pool.js'; await closePool();\""
+    "alerts:weekly": "tsx -e \"import dotenv from 'dotenv'; dotenv.config(); import { AlertOrchestrator } from './src/notifiers/AlertOrchestrator.js'; const a = new AlertOrchestrator(); await a.sendWeeklyReport(); import { closePool } from './src/database/pool.js'; await closePool();\"",
+    "deep-analysis": "tsx src/scripts/run-deep-analysis.ts",
+    "deep-analysis:id": "tsx src/scripts/run-deep-analysis.ts --id"
   },
   "dependencies": {
     "@octokit/rest": "^22.0.1",
