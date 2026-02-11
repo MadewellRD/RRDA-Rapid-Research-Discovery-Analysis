@@ -1,0 +1,40 @@
+{
+  "name": "@madewellrd/rda",
+  "version": "1.1.0",
+  "description": "RDA - Research & Development Agent (Autonomous Competitive Intelligence)",
+  "main": "dist/scheduler/index.js",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/scheduler/index.js",
+    "dev": "tsx src/scheduler/index.ts",
+    "scan:github": "tsx src/scanners/run.ts github",
+    "scan:hn": "tsx src/scanners/run.ts hn",
+    "scan:reddit": "tsx src/scanners/run.ts reddit",
+    "scan:arxiv": "tsx src/scanners/run.ts arxiv",
+    "scan:all": "tsx src/scanners/run.ts all",
+    "alerts:test": "tsx test-alerts.ts",
+    "alerts:digest": "tsx -e \"import dotenv from 'dotenv'; dotenv.config(); import { AlertOrchestrator } from './src/notifiers/AlertOrchestrator.js'; const a = new AlertOrchestrator(); await a.sendDailyDigest(); import { closePool } from './src/database/pool.js'; await closePool();\"",
+    "alerts:weekly": "tsx -e \"import dotenv from 'dotenv'; dotenv.config(); import { AlertOrchestrator } from './src/notifiers/AlertOrchestrator.js'; const a = new AlertOrchestrator(); await a.sendWeeklyReport(); import { closePool } from './src/database/pool.js'; await closePool();\""
+  },
+  "dependencies": {
+    "@octokit/rest": "^22.0.1",
+    "dotenv": "^16.3.1",
+    "node-cron": "^3.0.3",
+    "node-fetch": "^2.7.0",
+    "nodemailer": "^8.0.0",
+    "openai": "^4.20.1",
+    "pg": "^8.11.3",
+    "ws": "^8.19.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.5",
+    "@types/node-cron": "^3.0.11",
+    "@types/node-fetch": "^2.6.13",
+    "@types/nodemailer": "^6.4.14",
+    "@types/pg": "^8.10.9",
+    "@types/ws": "^8.18.1",
+    "tsx": "^4.21.0",
+    "typescript": "^5.3.3"
+  }
+}

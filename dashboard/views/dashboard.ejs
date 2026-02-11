@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RDA Intelligence Center</title>
+  <script src="/socket.io/socket.io.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+      color: #e0e6ed;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    
+    .header {
+      text-align: center;
+      margin-bottom: 30px;
+      padding: 40px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 12px;
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .header h1 {
+      font-size: 3em;
+      background: linear-gradient(135deg, #f43f5e 0%, #ec4899 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 10px;
+    }
+    
+    .header .subtitle {
+      color: #cbd5e0;
+      font-size: 1.2em;
+    }
+    
+    .status-indicator {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      margin-right: 8px;
+      animation: pulse 2s infinite;
+    }
+    
+    .status-active {
+      background: #10b981;
+      box-shadow: 0 0 15px #10b981;
+    }
+    
+    .status-inactive {
+      background: #ef4444;
+      box-shadow: 0 0 15px #ef4444;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+    
+    .stat-card {
+      background: rgba(255, 255, 255, 0.05);
+      padding: 30px;
+      border-radius: 12px;
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      transition: all 0.3s;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .stat-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+      border-color: rgba(244, 63, 94, 0.5);
+    }
+    
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 4px;
+      background: linear-gradient(90deg, #f43f5e 0%, #ec4899 100%);
+    }
+    
+    .stat-card .icon {
+      font-size: 2.5em;
+      margin-bottom: 15px;
+    }
+    
+    .stat-card .value {
+      font-size: 3.5em;
+      font-weight: bold;
+      background: linear-gradient(135deg, #f43f5e 0%, #ec4899 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin: 10px 0;
+    }
+    
+    .stat-card .label {
+      color: #cbd5e0;
+      font-size: 0.95em;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      font-weight: 600;
+    }
+    
+    .stat-card .sublabel {
+      color: #9ca3af;
+      font-size: 0.85em;
+      margin-top: 5px;
+    }
+    
+    .section {
+      background: rgba(255, 255, 255, 0.05);
+      padding: 30px;
+      border-radius: 12px;
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      margin-bottom: 20px;
+    }
+    
+    .section h2 {
+      margin-bottom: 25px;
+      color: #f43f5e;
+      font-size: 1.8em;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    
+    .discovery-item {
+      background: rgba(255, 255, 255, 0.03);
+      padding: 20px;
+      border-radius: 10px;
+      margin-bottom: 15px;
+      border-left: 4px solid #6366f1;
+      transition: all 0.3s;
+    }
+    
+    .discovery-item:hover {
+      background: rgba(255, 255, 255, 0.08);
+      transform: translateX(5px);
+    }
+    
+    .discovery-item.critical {
+      border-left-color: #ef4444;
+      background: rgba(239, 68, 68, 0.05);
+    }
+    
+    .discovery-item.high {
+      border-left-color: #f59e0b;
+      background: rgba(245, 158, 11, 0.05);
+    }
+    
+    .discovery-title {
+      font-weight: bold;
+      font-size: 1.1em;
+      margin-bottom: 8px;
+      color: #f0f9ff;
+    }
+    
+    .discovery-meta {
+      font-size: 0.9em;
+      color: #cbd5e0;
+      display: flex;
+      gap: 15px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+    
+    .discovery-description {
+      font-size: 0.9em;
+      color: #9ca3af;
+      line-height: 1.5;
+      margin-top: 10px;
+    }
+    
+    .badge {
+      display: inline-block;
+      padding: 5px 12px;
+      border-radius: 15px;
+      font-size: 0.75em;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .badge-critical {
+      background: #ef4444;
+      color: white;
+    }
+    
+    .badge-high {
+      background: #f59e0b;
+      color: white;
+    }
+    
+    .badge-medium {
+      background: #3b82f6;
+      color: white;
+    }
+    
+    .badge-low {
+      background: #10b981;
+      color: white;
+    }
+    
+    .source-badge {
+      background: rgba(99, 102, 241, 0.2);
+      color: #a5b4fc;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 0.8em;
+      font-weight: 600;
+    }
+    
+    .sources-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+    }
+    
+    .source-card {
+      background: rgba(255, 255, 255, 0.03);
+      padding: 20px;
+      border-radius: 10px;
+      text-align: center;
+    }
+    
+    .source-card .source-name {
+      font-size: 1.2em;
+      font-weight: bold;
+      margin-bottom: 10px;
+      color: #f0f9ff;
+    }
+    
+    .source-card .source-count {
+      font-size: 2em;
+      font-weight: bold;
+      color: #f43f5e;
+      margin: 10px 0;
+    }
+    
+    .last-updated {
+      text-align: center;
+      color: #cbd5e0;
+      font-size: 0.95em;
+      margin-top: 30px;
+      padding: 15px;
+      background: rgba(255, 255, 255, 0.03);
+      border-radius: 8px;
+    }
+    
+    .threat-score {
+      display: inline-block;
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-weight: bold;
+      font-size: 0.9em;
+    }
+    
+    .threat-score-high {
+      background: rgba(239, 68, 68, 0.2);
+      color: #fca5a5;
+    }
+    
+    .threat-score-medium {
+      background: rgba(245, 158, 11, 0.2);
+      color: #fcd34d;
+    }
+    
+    .threat-score-low {
+      background: rgba(16, 185, 129, 0.2);
+      color: #6ee7b7;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>🔍 RDA INTELLIGENCE CENTER</h1>
+    <p class="subtitle">Autonomous Competitive Intelligence & Threat Detection</p>
+    <p style="margin-top: 15px; font-size: 1em;">
+      <span class="status-indicator <%= stats.rdaActive ? 'status-active' : 'status-inactive' %>"></span>
+      Scanner Status: <%= stats.rdaActive ? 'Active - Monitoring 24/7' : 'Offline' %>
+    </p>
+  </div>
+
+  <div class="grid">
+    <div class="stat-card">
+      <div class="icon">📊</div>
+      <div class="label">Total Intelligence</div>
+      <div class="value" id="total-discoveries"><%= stats.totalDiscoveries %></div>
+      <div class="sublabel">All discoveries</div>
+    </div>
+    
+    <div class="stat-card">
+      <div class="icon">⏰</div>
+      <div class="label">Last 24 Hours</div>
+      <div class="value" id="discoveries-24h"><%= stats.discoveries24h %></div>
+      <div class="sublabel">New discoveries</div>
+    </div>
+    
+    <div class="stat-card">
+      <div class="icon">📅</div>
+      <div class="label">Last 7 Days</div>
+      <div class="value" id="discoveries-7d"><%= stats.discoveries7d %></div>
+      <div class="sublabel">Weekly total</div>
+    </div>
+    
+    <div class="stat-card">
+      <div class="icon">🚨</div>
+      <div class="label">Critical Threats</div>
+      <div class="value" id="critical-threats"><%= stats.criticalThreats %></div>
+      <div class="sublabel">Requires immediate action</div>
+    </div>
+    
+    <div class="stat-card">
+      <div class="icon">⚠️</div>
+      <div class="label">High Priority</div>
+      <div class="value" id="high-priority"><%= stats.highPriority %></div>
+      <div class="sublabel">Needs attention</div>
+    </div>
+    
+    <div class="stat-card">
+      <div class="icon">🤖</div>
+      <div class="label">Auto Responses</div>
+      <div class="value" id="auto-responses"><%= stats.autonomousResponses %></div>
+      <div class="sublabel"><%= stats.responses24h %> in last 24h</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>📡 Intelligence Sources</h2>
+    <div class="sources-grid">
+      <% stats.sourceBreakdown.forEach(source => { %>
+        <div class="source-card">
+          <div class="source-name"><%= source.source.toUpperCase() %></div>
+          <div class="source-count"><%= source.count %></div>
+          <div style="font-size: 0.85em; color: #9ca3af;">discoveries (24h)</div>
+        </div>
+      <% }) %>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>🚨 Critical & High Priority Threats</h2>
+    <div id="top-threats">
+      <% if (stats.topThreats && stats.topThreats.length > 0) { %>
+        <% stats.topThreats.forEach(threat => { %>
+          <div class="discovery-item <%= (threat.intelligence_level || '').toLowerCase() %>">
+            <div class="discovery-title">
+              <span class="badge badge-<%= (threat.intelligence_level || 'medium').toLowerCase() %>">
+                <%= threat.intelligence_level || 'UNKNOWN' %>
+              </span>
+              <% if (threat.threat_score) { %>
+                <span class="threat-score <%= threat.threat_score >= 8 ? 'threat-score-high' : threat.threat_score >= 5 ? 'threat-score-medium' : 'threat-score-low' %>">
+                  Threat: <%= threat.threat_score %>/10
+                </span>
+              <% } %>
+              <%= threat.title %>
+            </div>
+            <div class="discovery-meta">
+              <span class="source-badge"><%= threat.source %></span>
+              <span>⭐ <%= threat.stars || threat.upvotes || 0 %></span>
+              <span>🕐 <%= new Date(threat.discovered_at).toLocaleString() %></span>
+            </div>
+            <% if (threat.description) { %>
+              <div class="discovery-description">
+                <%= threat.description.substring(0, 200) %><%= threat.description.length > 200 ? '...' : '' %>
+              </div>
+            <% } %>
+            <% if (threat.recommended_action) { %>
+              <div style="margin-top: 10px; padding: 10px; background: rgba(245, 158, 11, 0.1); border-radius: 6px; font-size: 0.9em;">
+                <strong style="color: #fbbf24;">Recommended Action:</strong> <%= threat.recommended_action %>
+              </div>
+            <% } %>
+          </div>
+        <% }) %>
+      <% } else { %>
+        <div style="text-align: center; padding: 40px; color: #9ca3af;">
+          <div style="font-size: 3em; margin-bottom: 15px;">✅</div>
+          <p>No critical threats detected</p>
+        </div>
+      <% } %>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>🔥 Recent Discoveries</h2>
+    <div id="recent-discoveries">
+      <% stats.recentDiscoveries.forEach(discovery => { %>
+        <div class="discovery-item <%= (discovery.intelligence_level || '').toLowerCase() %>">
+          <div class="discovery-title">
+            <% if (discovery.intelligence_level) { %>
+              <span class="badge badge-<%= discovery.intelligence_level.toLowerCase() %>">
+                <%= discovery.intelligence_level %>
+              </span>
+            <% } %>
+            <%= discovery.title %>
+          </div>
+          <div class="discovery-meta">
+            <span class="source-badge"><%= discovery.source %></span>
+            <% if (discovery.stars || discovery.upvotes) { %>
+              <span>⭐ <%= discovery.stars || discovery.upvotes %></span>
+            <% } %>
+            <% if (discovery.threat_score) { %>
+              <span>🎯 Threat: <%= discovery.threat_score %>/10</span>
+            <% } %>
+            <span>🕐 <%= new Date(discovery.discovered_at).toLocaleString() %></span>
+          </div>
+          <% if (discovery.description) { %>
+            <div class="discovery-description">
+              <%= discovery.description.substring(0, 150) %><%= discovery.description.length > 150 ? '...' : '' %>
+            </div>
+          <% } %>
+        </div>
+      <% }) %>
+    </div>
+  </div>
+
+  <div class="last-updated" id="last-updated">
+    Last updated: <%= new Date(stats.timestamp).toLocaleString() %>
+  </div>
+
+  <script>
+    const socket = io();
+    
+    socket.on('stats-update', (stats) => {
+      // Update numbers
+      document.getElementById('total-discoveries').textContent = stats.totalDiscoveries;
+      document.getElementById('discoveries-24h').textContent = stats.discoveries24h;
+      document.getElementById('discoveries-7d').textContent = stats.discoveries7d;
+      document.getElementById('critical-threats').textContent = stats.criticalThreats;
+      document.getElementById('high-priority').textContent = stats.highPriority;
+      document.getElementById('auto-responses').textContent = stats.autonomousResponses;
+      document.getElementById('last-updated').textContent = 
+        'Last updated: ' + new Date(stats.timestamp).toLocaleString();
+    });
+    
+    // Auto-refresh every 30 seconds
+    setInterval(() => {
+      location.reload();
+    }, 30000);
+  </script>
+</body>
+</html>
