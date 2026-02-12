@@ -128,6 +128,22 @@ export class FORGEClient {
   // ─── High-Level Integration Methods ───────────────────────────────
 
   /**
+   * Check if this discovery already has an active FORGE response.
+   * Public method for use by AutonomousResponseOrchestrator pre-flight check.
+   */
+  async hasExistingResponse(discovery: Discovery): Promise<boolean> {
+    if (discovery.id) {
+      const existing = await this.getExistingResponse(discovery.id);
+      if (existing) return true;
+    }
+    if (discovery.url) {
+      const existing = await this.getExistingResponseByUrl(discovery.url);
+      if (existing) return true;
+    }
+    return false;
+  }
+
+  /**
    * Should this discovery trigger an autonomous FORGE response?
    */
   shouldTrigger(discovery: Discovery): boolean {
@@ -153,6 +169,13 @@ export class FORGEClient {
       const existing = await this.getExistingResponse(discovery.id);
       if (existing) {
         console.log(`   ⏭️  Already triggered for discovery ${discovery.id} (project: ${existing.forge_project_id}, status: ${existing.status})`);
+        return null;
+      }
+    } else if (discovery.url) {
+      // Fallback: check by URL when discovery ID is not available
+      const existing = await this.getExistingResponseByUrl(discovery.url);
+      if (existing) {
+        console.log(`   ⏭️  Already triggered for URL ${discovery.url} (project: ${existing.forge_project_id}, status: ${existing.status})`);
         return null;
       }
     }
@@ -182,6 +205,12 @@ export class FORGEClient {
         return response;
 
       } catch (error: any) {
+        // 409 = FORGE-side duplicate name — treat as success (already handled)
+        if (error instanceof ForgeApiError && error.statusCode === 409) {
+          console.log(`   ⏭️  FORGE rejected duplicate project name: ${request.name}`);
+          return null;
+        }
+
         lastError = error;
         console.error(`   ⚠️  Attempt ${attempt} failed: ${error.message}`);
 
@@ -216,6 +245,28 @@ export class FORGEClient {
     } catch (error: any) {
       console.error('   ⚠️  Failed to check existing response:', error.message);
       return null; // Fail open — allow trigger if DB check fails
+    }
+  }
+
+  /**
+   * Fallback dedup: check by URL via discovery table join.
+   * Used when discovery.id is not available (legacy callers).
+   */
+  private async getExistingResponseByUrl(url: string): Promise<any | null> {
+    try {
+      const pool = getPool();
+      const result = await pool.query(
+        `SELECT ra.id, ra.forge_project_id, ra.status
+         FROM response_actions ra
+         JOIN discoveries d ON d.id = ra.discovery_id
+         WHERE d.url = $1 AND ra.status IN ('initiated', 'completed')
+         ORDER BY ra.created_at DESC LIMIT 1`,
+        [url]
+      );
+      return result.rows[0] || null;
+    } catch (error: any) {
+      console.error('   ⚠️  Failed to check existing response by URL:', error.message);
+      return null;
     }
   }
 

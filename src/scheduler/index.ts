@@ -209,7 +209,7 @@ class ProductionScheduler {
       const assessment: IntelligenceLevel = await this.core.assessIntelligence(discovery);
 
       // 2. Store in database (assessIntelligence + storeDiscovery merge the data)
-      await this.core.storeDiscovery(discovery, assessment);
+      const discoveryId = await this.core.storeDiscovery(discovery, assessment);
 
       // Track stats
       this.stats.totalDiscoveries++;
@@ -219,6 +219,7 @@ class ProductionScheduler {
       // 3. Build the assessed discovery object for downstream processing
       const assessedDiscovery: Discovery = {
         ...discovery,
+        id: discoveryId,
         intelligence_level: assessment.level,
         threat_score: assessment.threatScore,
         opportunity_score: assessment.opportunityScore,

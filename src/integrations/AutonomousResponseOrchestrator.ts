@@ -54,6 +54,15 @@ export class AutonomousResponseOrchestrator {
 
     console.log(`   🤖 Initiating autonomous response...`);
 
+    // Pre-flight dedup: check if this discovery already has a FORGE response
+    // This runs BEFORE logAction() to avoid the race where 'initiated' status
+    // causes triggerCounterFeature() to skip itself
+    const alreadyTriggered = await this.forge.hasExistingResponse(discovery);
+    if (alreadyTriggered) {
+      console.log(`   ⏭️  Already has FORGE response — skipping`);
+      return;
+    }
+
     // Log the action as 'initiated'
     let actionId: number | null = null;
     try {
