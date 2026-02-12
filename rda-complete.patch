@@ -1,0 +1,40 @@
+diff --git a/src/database/schema.sql b/src/database/schema.sql
+index eab5855..4376e71 100644
+--- a/src/database/schema.sql
++++ b/src/database/schema.sql
+@@ -178,3 +178,23 @@ ON CONFLICT (name) DO NOTHING;
+ -- Initialize today's metrics
+ INSERT INTO metrics (date) VALUES (CURRENT_DATE)
+ ON CONFLICT (date) DO NOTHING;
++
++-- ═══════════════════════════════════════════════════════════════
++-- RDA → FORGE Integration: Response Actions
++-- Tracks autonomous responses triggered by RDA discoveries
++-- ═══════════════════════════════════════════════════════════════
++
++CREATE TABLE IF NOT EXISTS response_actions (
++  id SERIAL PRIMARY KEY,
++  discovery_id INTEGER REFERENCES discoveries(id),
++  action_type VARCHAR(50) NOT NULL,
++  status VARCHAR(20) NOT NULL DEFAULT 'initiated',
++  forge_project_id VARCHAR(100),
++  result JSONB,
++  created_at TIMESTAMPTZ DEFAULT NOW(),
++  completed_at TIMESTAMPTZ
++);
++
++CREATE INDEX IF NOT EXISTS idx_response_actions_discovery ON response_actions(discovery_id);
++CREATE INDEX IF NOT EXISTS idx_response_actions_status ON response_actions(status);
++CREATE INDEX IF NOT EXISTS idx_response_actions_created ON response_actions(created_at DESC);
+diff --git a/src/scheduler/index.ts b/src/scheduler/index.ts
+index 6acb70f..e8544a9 100644
+--- a/src/scheduler/index.ts
++++ b/src/scheduler/index.ts
+@@ -231,6 +231,7 @@ class ProductionScheduler {
+       if (assessment.level === 'CRITICAL' || assessment.level === 'HIGH') {
+         try {
+           await this.autonomousResponse.processDiscovery(assessedDiscovery);
++          this.stats.forgeTriggered++;
+         } catch (err: any) {
+           // Don't let FORGE failure stop the scanner
+           console.error(`   ⚠️  Autonomous response error: ${err.message}`);

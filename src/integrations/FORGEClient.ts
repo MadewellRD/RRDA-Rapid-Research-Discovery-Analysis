@@ -223,11 +223,10 @@ export class FORGEClient {
 
   private buildDescription(discovery: Discovery): string {
     const parts = [
-      `Competitive response to: ${discovery.title}`,
-      discovery.description ? `\nContext: ${discovery.description}` : '',
-      discovery.recommended_action ? `\nRecommended approach: ${discovery.recommended_action}` : '',
-      `\nThreat score: ${discovery.threat_score}/10`,
-      `\nSource: ${discovery.source} (${discovery.url})`,
+      `Build an API service with capabilities equivalent to: ${discovery.title}`,
+      discovery.description ? `\nCapabilities to implement: ${discovery.description}` : '',
+      discovery.recommended_action ? `\nImplementation approach: ${discovery.recommended_action}` : '',
+      `\nPriority: ${discovery.threat_score}/10`,
     ];
     // Cap at 2000 chars for the FORGE API
     return parts.join('').substring(0, 2000);

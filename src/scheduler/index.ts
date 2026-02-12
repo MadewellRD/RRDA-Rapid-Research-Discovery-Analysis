@@ -231,6 +231,7 @@ class ProductionScheduler {
       if (assessment.level === 'CRITICAL' || assessment.level === 'HIGH') {
         try {
           await this.autonomousResponse.processDiscovery(assessedDiscovery);
+          this.stats.forgeTriggered++;
         } catch (err: any) {
           // Don't let FORGE failure stop the scanner
           console.error(`   ⚠️  Autonomous response error: ${err.message}`);

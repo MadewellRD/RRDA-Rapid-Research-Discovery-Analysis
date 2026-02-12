@@ -25,7 +25,7 @@ export class RDACore {
     // GitHub scanner
     this.githubScanner = new GitHubScanner();
 
-    console.log('🤖 RDA Core initialized');
+    console.log('🤖 RRDA Core initialized');
   }
 
   async assessIntelligence(discovery: Discovery): Promise<IntelligenceLevel> {
@@ -42,7 +42,7 @@ Stars: ${discovery.stars || 0}
 Metadata: ${JSON.stringify(discovery.metadata, null, 2)}
 
 MadewellRD's Core Business:
-- FORGE: Autonomous software development platform with 24 specialized agents
+- FORGE: Autonomous Software Development platform with 24 specialized agents
 - Legacy system modernization (COBOL, FORTRAN → Modern languages)
 - AI-powered code generation
 - Target market: Enterprise software development automation
@@ -159,7 +159,7 @@ Respond with valid JSON (no markdown):
     }
 
     console.log('\n' + '='.repeat(60));
-    console.log('🎯 RDA Scan Complete!');
+    console.log('🎯 RRDA Scan Complete!');
     console.log('='.repeat(60));
     console.log(`📊 Total Analyzed: ${discoveries.length}`);
     console.log(`🚨 Critical Threats: ${criticalCount}`);
