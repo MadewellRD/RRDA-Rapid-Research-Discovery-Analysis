@@ -51,6 +51,9 @@ export class FORGEClient {
     };
 
     if (!this.config.token) {
+      if (process.env.AUTONOMOUS_RESPONSE_ENABLED === 'true') {
+        throw new Error('FORGE_API_TOKEN is required when AUTONOMOUS_RESPONSE_ENABLED=true');
+      }
       console.warn('⚠️  FORGE_API_TOKEN not set — FORGE integration will fail on authenticated endpoints');
     }
 
@@ -88,6 +91,7 @@ export class FORGEClient {
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${this.config.token}`,
+        'X-Idempotency-Key': `rda-${request.name}`,
       },
       body: JSON.stringify(request),
       signal: AbortSignal.timeout(30000),

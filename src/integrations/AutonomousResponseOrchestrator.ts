@@ -54,21 +54,28 @@ export class AutonomousResponseOrchestrator {
 
     console.log(`   🤖 Initiating autonomous response...`);
 
-    // Pre-flight dedup: check if this discovery already has a FORGE response
-    // This runs BEFORE logAction() to avoid the race where 'initiated' status
-    // causes triggerCounterFeature() to skip itself
-    const alreadyTriggered = await this.forge.hasExistingResponse(discovery);
-    if (alreadyTriggered) {
-      console.log(`   ⏭️  Already has FORGE response — skipping`);
-      return;
-    }
-
-    // Log the action as 'initiated'
+    // Atomic dedup + claim: INSERT only if no existing initiated/completed action exists.
+    // This eliminates the TOCTOU race between checking and inserting.
     let actionId: number | null = null;
     try {
-      actionId = await this.logAction(discovery, 'counter_feature', 'initiated');
+      const pool = getPool();
+      const claimResult = await pool.query(
+        `INSERT INTO response_actions (discovery_id, action_type, status, created_at)
+         SELECT $1, $2, 'initiated', NOW()
+         WHERE NOT EXISTS (
+           SELECT 1 FROM response_actions
+           WHERE discovery_id = $1 AND action_type = $2 AND status IN ('initiated', 'completed')
+         )
+         RETURNING id`,
+        [discovery.id, 'counter_feature']
+      );
+      if (claimResult.rows.length === 0) {
+        console.log(`   ⏭️  Already has FORGE response — skipping`);
+        return;
+      }
+      actionId = claimResult.rows[0].id;
     } catch (err: any) {
-      console.error(`   ⚠️  Failed to log action: ${err.message}`);
+      console.error(`   ⚠️  Failed to claim action: ${err.message}`);
       // Continue anyway — the trigger is more important than the log
     }
 

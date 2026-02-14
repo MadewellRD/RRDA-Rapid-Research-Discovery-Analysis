@@ -98,57 +98,51 @@ export class ReportGenerator {
     const end = new Date(start);
     end.setDate(end.getDate() + 7);
 
-    const totalResult = await this.pool.query(
-      `SELECT COUNT(*) as count FROM discoveries
-       WHERE discovered_at >= $1 AND discovered_at < $2`,
+    // Single query with CTEs instead of 5 separate round trips
+    const result = await this.pool.query(
+      `WITH base AS (
+        SELECT * FROM discoveries WHERE discovered_at >= $1 AND discovered_at < $2
+      ),
+      counts AS (
+        SELECT
+          COUNT(*) as total,
+          COUNT(*) FILTER (WHERE intelligence_level = 'CRITICAL') as critical,
+          COUNT(*) FILTER (WHERE intelligence_level = 'HIGH') as high
+        FROM base
+      ),
+      top_threats AS (
+        SELECT * FROM base ORDER BY threat_score DESC LIMIT 10
+      ),
+      top_opps AS (
+        SELECT * FROM base ORDER BY opportunity_score DESC LIMIT 10
+      )
+      SELECT
+        (SELECT row_to_json(counts) FROM counts) as counts,
+        (SELECT COALESCE(json_agg(t), '[]'::json) FROM top_threats t) as threats,
+        (SELECT COALESCE(json_agg(o), '[]'::json) FROM top_opps o) as opportunities`,
       [start, end]
     );
 
-    const criticalResult = await this.pool.query(
-      `SELECT COUNT(*) as count FROM discoveries
-       WHERE discovered_at >= $1 AND discovered_at < $2
-       AND intelligence_level = 'CRITICAL'`,
-      [start, end]
-    );
-
-    const highResult = await this.pool.query(
-      `SELECT COUNT(*) as count FROM discoveries
-       WHERE discovered_at >= $1 AND discovered_at < $2
-       AND intelligence_level = 'HIGH'`,
-      [start, end]
-    );
-
-    const threatsResult = await this.pool.query(
-      `SELECT * FROM discoveries
-       WHERE discovered_at >= $1 AND discovered_at < $2
-       ORDER BY threat_score DESC
-       LIMIT 10`,
-      [start, end]
-    );
-
-    const opportunitiesResult = await this.pool.query(
-      `SELECT * FROM discoveries
-       WHERE discovered_at >= $1 AND discovered_at < $2
-       ORDER BY opportunity_score DESC
-       LIMIT 10`,
-      [start, end]
-    );
+    const row = result.rows[0];
+    const counts = row.counts || { total: 0, critical: 0, high: 0 };
+    const topThreats = row.threats || [];
+    const topOpportunities = row.opportunities || [];
 
     const trends = await this.identifyTrends(start, end);
 
     const costSavings = this.calculateCostSavings(
-      threatsResult.rows,
-      opportunitiesResult.rows
+      topThreats,
+      topOpportunities
     );
 
     return {
       weekStart: start,
       weekEnd: end,
-      totalDiscoveries: parseInt(totalResult.rows[0]?.count || 0),
-      critical: parseInt(criticalResult.rows[0]?.count || 0),
-      high: parseInt(highResult.rows[0]?.count || 0),
-      topThreats: threatsResult.rows,
-      topOpportunities: opportunitiesResult.rows,
+      totalDiscoveries: parseInt(counts.total || 0),
+      critical: parseInt(counts.critical || 0),
+      high: parseInt(counts.high || 0),
+      topThreats,
+      topOpportunities,
       trends,
       costSavings,
     };

@@ -31,6 +31,12 @@ export class RDACore {
   async assessIntelligence(discovery: Discovery): Promise<IntelligenceLevel> {
     console.log(`🔍 Assessing: ${discovery.title}`);
 
+    // Cap metadata size to prevent token exhaustion / prompt injection
+    const metadataStr = JSON.stringify(discovery.metadata || {});
+    if (metadataStr.length > 10000) {
+      discovery.metadata = { _truncated: true, originalSize: metadataStr.length };
+    }
+
     const prompt = `You are MadewellRD's Research & Development Agent (RDA). Assess this discovery's strategic value.
 
 Discovery:

@@ -1,11 +1,10 @@
-import { closePool } from '../database/pool.js';
+import { getPool, closePool } from '../database/pool.js';
 import cron from 'node-cron';
 import { RDACore } from '../core/RDACore.js';
 import { GitHubScanner } from '../scanners/GitHubScanner.js';
 import { HackerNewsScanner } from '../scanners/HackerNewsScanner.js';
 import { RedditScanner } from '../scanners/RedditScanner.js';
 import { ArxivScanner } from '../scanners/ArxivScanner.js';
-import { Pool } from 'pg';
 
 interface ScheduleConfig {
   github: string;
@@ -16,8 +15,7 @@ interface ScheduleConfig {
 
 export class RDAScheduler {
   private rda: RDACore;
-  private pool: Pool;
-  
+
   private githubScanner: GitHubScanner;
   private hnScanner: HackerNewsScanner;
   private redditScanner: RedditScanner;
@@ -32,9 +30,6 @@ export class RDAScheduler {
 
   constructor() {
     this.rda = new RDACore();
-    this.pool = new Pool({
-      connectionString: process.env.DATABASE_URL,
-    });
 
     this.githubScanner = new GitHubScanner();
     this.hnScanner = new HackerNewsScanner();
@@ -249,11 +244,11 @@ export class RDAScheduler {
     high: number
   ): Promise<void> {
     try {
-      await this.pool.query(
+      await getPool().query(
         `INSERT INTO metrics (date, discoveries_total, discoveries_critical, discoveries_high)
          VALUES (CURRENT_DATE, $1, $2, $3)
-         ON CONFLICT (date) 
-         DO UPDATE SET 
+         ON CONFLICT (date)
+         DO UPDATE SET
            discoveries_total = metrics.discoveries_total + $1,
            discoveries_critical = metrics.discoveries_critical + $2,
            discoveries_high = metrics.discoveries_high + $3`,
@@ -270,6 +265,5 @@ export class RDAScheduler {
 
   async close(): Promise<void> {
     await closePool();
-    await this.pool.end();
   }
 }
