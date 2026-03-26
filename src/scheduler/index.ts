@@ -1,26 +1,19 @@
 /**
  * Innovation Scheduler
  * 
- * Replaces the old "counter-feature" approach with a creative innovation loop.
+ * Runs the continuous intelligence and proposal-generation loop.
  * 
  * ARCHITECTURE:
- *   RDA Scanners (12 sources, continuous) 
+ *   RDA Scanners (4 sources, continuous)
  *     → discoveries table
  *   Innovation Agent (every 20 min)
  *     → synthesizes trends → proposes novel projects
- *     → auto-triggers FORGE
- * 
- * NEW SCANNERS (added to existing GitHub, HN, Reddit, ArXiv):
- *   - Product Hunt (every 6h)
- *   - Dev.to (every 2h)  
- *   - npm trending (every 3h)
- *   - PyPI (every 6h)
- *   - Tech News RSS (every 2h)
- *   - Stack Overflow (every 4h)
- *   - Lobsters (every hour)
- *   - GitHub Issues (every 6h)
- * 
- * Total: 12 intelligence sources feeding one Innovation Agent
+ *
+ * This checkout currently includes the original 4 source scanners:
+ *   - GitHub
+ *   - Hacker News
+ *   - Reddit
+ *   - ArXiv
  */
 import cron from 'node-cron';
 import dotenv from 'dotenv';
@@ -31,16 +24,6 @@ import { GitHubScanner } from '../scanners/GitHubScanner.js';
 import { HackerNewsScanner } from '../scanners/HackerNewsScanner.js';
 import { RedditScanner } from '../scanners/RedditScanner.js';
 import { ArxivScanner } from '../scanners/ArxivScanner.js';
-
-// New scanners
-import { ProductHuntScanner } from '../scanners/ProductHuntScanner.js';
-import { DevToScanner } from '../scanners/DevToScanner.js';
-import { NpmTrendingScanner } from '../scanners/NpmTrendingScanner.js';
-import { PyPIScanner } from '../scanners/PyPIScanner.js';
-import { TechNewsScanner } from '../scanners/TechNewsScanner.js';
-import { StackOverflowScanner } from '../scanners/StackOverflowScanner.js';
-import { LobstersScanner } from '../scanners/LobstersScanner.js';
-import { GitHubIssuesScanner } from '../scanners/GitHubIssuesScanner.js';
 
 // Core
 import { RDACore } from '../core/RDACore.js';
@@ -96,16 +79,6 @@ class InnovationScheduler {
   private reddit: RedditScanner;
   private arxiv: ArxivScanner;
 
-  // New scanners
-  private productHunt: ProductHuntScanner;
-  private devTo: DevToScanner;
-  private npm: NpmTrendingScanner;
-  private pypi: PyPIScanner;
-  private techNews: TechNewsScanner;
-  private stackoverflow: StackOverflowScanner;
-  private lobsters: LobstersScanner;
-  private githubIssues: GitHubIssuesScanner;
-
   // Core
   private core: RDACore;
   private innovation: InnovationAgent;
@@ -119,7 +92,6 @@ class InnovationScheduler {
     totalDiscoveries: 0,
     innovationCycles: 0,
     projectsProposed: 0,
-    forgeTriggered: 0,
     errors: 0,
   };
 
@@ -130,16 +102,6 @@ class InnovationScheduler {
     this.reddit = new RedditScanner();
     this.arxiv = new ArxivScanner();
 
-    // New
-    this.productHunt = new ProductHuntScanner();
-    this.devTo = new DevToScanner();
-    this.npm = new NpmTrendingScanner();
-    this.pypi = new PyPIScanner();
-    this.techNews = new TechNewsScanner();
-    this.stackoverflow = new StackOverflowScanner();
-    this.lobsters = new LobstersScanner();
-    this.githubIssues = new GitHubIssuesScanner();
-
     // Core
     this.core = new RDACore();
     this.innovation = new InnovationAgent();
@@ -148,29 +110,20 @@ class InnovationScheduler {
 
   async start() {
     console.log('\n' + '='.repeat(70));
-    console.log('  PROMETHEUS — Autonomous Innovation Engine');
-    console.log('  RDA Intelligence + Innovation Agent + FORGE Production');
+    console.log('  RRDA — Rapid Research Development Analysis');
+    console.log('  Continuous intelligence and proposal generation');
     console.log('='.repeat(70));
     console.log('');
-    console.log('INTELLIGENCE SOURCES (12):');
+    console.log('INTELLIGENCE SOURCES (4):');
     console.log('   1. GitHub Trending       every 15 min');
     console.log('   2. Hacker News           every hour');
     console.log('   3. Reddit                every 6 hours');
     console.log('   4. ArXiv                 daily midnight PT');
-    console.log('   5. Product Hunt          every 6 hours');
-    console.log('   6. Dev.to                every 2 hours');
-    console.log('   7. npm Trending          every 3 hours');
-    console.log('   8. PyPI                  every 6 hours');
-    console.log('   9. Tech News (RSS)       every 2 hours');
-    console.log('  10. Stack Overflow        every 4 hours');
-    console.log('  11. Lobsters              every hour');
-    console.log('  12. GitHub Issues         every 6 hours');
     console.log('');
     console.log('INNOVATION AGENT:');
     console.log('   Cycle: every 20 minutes');
-    console.log('   Mode: AUTONOMOUS — auto-triggers FORGE');
+    console.log('   Mode: autonomous proposal synthesis');
     console.log(`   Creative model: ${process.env.INNOVATION_CREATIVE_MODEL || 'gpt-4o'}`);
-    console.log(`   FORGE API: ${process.env.FORGE_API_URL || 'http://localhost:3001'}`);
     console.log('='.repeat(70));
 
     // Verify database
@@ -192,9 +145,7 @@ class InnovationScheduler {
           novelty_score INTEGER DEFAULT 5,
           reasoning TEXT,
           status VARCHAR(20) DEFAULT 'proposed',
-          forge_project_id VARCHAR(100),
-          created_at TIMESTAMP DEFAULT NOW(),
-          completed_at TIMESTAMP
+          created_at TIMESTAMP DEFAULT NOW()
         )
       `);
       await pool.query(`CREATE INDEX IF NOT EXISTS idx_proposals_status ON innovation_proposals (status)`);
@@ -220,16 +171,6 @@ class InnovationScheduler {
     this.cronTasks.push(cron.schedule('0 */6 * * *', () => this.safeScan('Reddit', () => this.scanReddit()), { timezone: TIMEZONE }));
     this.cronTasks.push(cron.schedule('0 0 * * *', () => this.safeScan('ArXiv', () => this.scanArxiv()), { timezone: TIMEZONE }));
 
-    // New 8
-    this.cronTasks.push(cron.schedule('0 */6 * * *', () => this.safeScan('Product Hunt', () => this.scanProductHunt()), { timezone: TIMEZONE }));
-    this.cronTasks.push(cron.schedule('0 */2 * * *', () => this.safeScan('Dev.to', () => this.scanDevTo()), { timezone: TIMEZONE }));
-    this.cronTasks.push(cron.schedule('0 */3 * * *', () => this.safeScan('npm', () => this.scanNpm()), { timezone: TIMEZONE }));
-    this.cronTasks.push(cron.schedule('0 */6 * * *', () => this.safeScan('PyPI', () => this.scanPyPI()), { timezone: TIMEZONE }));
-    this.cronTasks.push(cron.schedule('30 */2 * * *', () => this.safeScan('Tech News', () => this.scanTechNews()), { timezone: TIMEZONE }));
-    this.cronTasks.push(cron.schedule('0 */4 * * *', () => this.safeScan('Stack Overflow', () => this.scanStackOverflow()), { timezone: TIMEZONE }));
-    this.cronTasks.push(cron.schedule('30 * * * *', () => this.safeScan('Lobsters', () => this.scanLobsters()), { timezone: TIMEZONE }));
-    this.cronTasks.push(cron.schedule('0 */6 * * *', () => this.safeScan('GitHub Issues', () => this.scanGitHubIssues()), { timezone: TIMEZONE }));
-
     // ── Innovation Agent schedule ───────────────────────────────
     this.cronTasks.push(cron.schedule('*/20 * * * *', () => this.runInnovationCycle(), { timezone: TIMEZONE }));
 
@@ -244,8 +185,8 @@ class InnovationScheduler {
       await this.alerts.sendWeeklyReport().catch(e => console.error('Weekly report failed:', e.message));
     }, { timezone: TIMEZONE }));
 
-    console.log('\nPROMETHEUS Innovation Engine is LIVE');
-    console.log('12 intelligence sources | Innovation Agent every 20 min | FORGE auto-trigger\n');
+    console.log('\nRRDA scheduler is live');
+    console.log('4 intelligence sources | Innovation Agent every 20 min\n');
   }
 
   // ─── Innovation Cycle ─────────────────────────────────────────
@@ -256,7 +197,6 @@ class InnovationScheduler {
       const proposal = await this.innovation.run();
       if (proposal) {
         this.stats.projectsProposed++;
-        if (proposal.forgeProjectId) this.stats.forgeTriggered++;
       }
     } catch (err: any) {
       console.error(`Innovation cycle failed: ${err.message}`);
@@ -317,16 +257,11 @@ class InnovationScheduler {
   // ─── Scanner Implementations ──────────────────────────────────
 
   private async runAllScans() {
-    // Batch 1: fast/independent sources in parallel
     await Promise.allSettled([
       this.safeScan('GitHub', () => this.scanGitHub()),
       this.safeScan('Hacker News', () => this.scanHackerNews()),
-      this.safeScan('Lobsters', () => this.scanLobsters()),
-    ]);
-    // Batch 2: additional sources
-    await Promise.allSettled([
-      this.safeScan('Dev.to', () => this.scanDevTo()),
-      this.safeScan('Tech News', () => this.scanTechNews()),
+      this.safeScan('Reddit', () => this.scanReddit()),
+      this.safeScan('ArXiv', () => this.scanArxiv()),
     ]);
   }
 
@@ -365,62 +300,11 @@ class InnovationScheduler {
     await this.processDiscoveries(papers, 'arxiv');
   }
 
-  private async scanProductHunt() {
-    const products = await this.productHunt.scanToday(15);
-    console.log(`   Product Hunt: ${products.length} products`);
-    await this.processDiscoveries(products, 'producthunt');
-  }
-
-  private async scanDevTo() {
-    const trending = await this.devTo.scanTrending(10);
-    const tagged = await this.devTo.scanByTags(['ai', 'llm', 'devtools', 'api', 'automation', 'opensource', 'testing', 'cicd', 'agentai', 'machinelearning'], 5);
-    const all = [...trending, ...tagged];
-    console.log(`   Dev.to: ${all.length} articles`);
-    await this.processDiscoveries(all, 'devto');
-  }
-
-  private async scanNpm() {
-    const packages = await this.npm.scanTrending(['ai-agent', 'llm', 'mcp', 'code-generation', 'devtools', 'automation', 'testing-framework', 'ci-cd', 'api-gateway', 'orchestration']);
-    console.log(`   npm: ${packages.length} packages`);
-    await this.processDiscoveries(packages, 'npm_trending');
-  }
-
-  private async scanPyPI() {
-    const packages = await this.pypi.scanTrending();
-    console.log(`   PyPI: ${packages.length} packages`);
-    await this.processDiscoveries(packages, 'pypi');
-  }
-
-  private async scanTechNews() {
-    const articles = await this.techNews.scanAll(20);
-    console.log(`   Tech News: ${articles.length} articles`);
-    await this.processDiscoveries(articles, 'technews');
-  }
-
-  private async scanStackOverflow() {
-    const trending = await this.stackoverflow.scanTrending(['openai', 'langchain', 'llm', 'github-actions', 'ci-cd', 'docker', 'kubernetes', 'api-design', 'code-generation', 'automated-testing']);
-    const unanswered = await this.stackoverflow.scanUnanswered(['ai-agent', 'llm', 'devops', 'automation', 'code-review']);
-    console.log(`   Stack Overflow: ${trending.length + unanswered.length} questions`);
-    await this.processDiscoveries([...trending, ...unanswered], 'stackoverflow');
-  }
-
-  private async scanLobsters() {
-    const hot = await this.lobsters.scanHottest(20);
-    console.log(`   Lobsters: ${hot.length} stories`);
-    await this.processDiscoveries(hot, 'lobsters');
-  }
-
-  private async scanGitHubIssues() {
-    const features = await this.githubIssues.scanFeatureRequests(20);
-    console.log(`   GitHub Issues: ${features.length} feature requests`);
-    await this.processDiscoveries(features, 'github_issues');
-  }
-
   // ─── Lifecycle ────────────────────────────────────────────────
 
   async shutdown() {
-    console.log('\nShutting down PROMETHEUS Innovation Engine...');
-    console.log(`   Stats: ${this.stats.totalDiscoveries} discoveries, ${this.stats.innovationCycles} cycles, ${this.stats.projectsProposed} proposals, ${this.stats.forgeTriggered} FORGE triggers, ${this.stats.errors} errors`);
+    console.log('\nShutting down RRDA scheduler...');
+    console.log(`   Stats: ${this.stats.totalDiscoveries} discoveries, ${this.stats.innovationCycles} cycles, ${this.stats.projectsProposed} proposals, ${this.stats.errors} errors`);
     // Stop all cron schedules
     for (const task of this.cronTasks) {
       task.stop();
@@ -428,10 +312,6 @@ class InnovationScheduler {
     this.cronTasks = [];
     await closePool();
     console.log('Shutdown complete');
-  }
-
-  private sleep(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
   }
 }
 

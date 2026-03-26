@@ -1,22 +1,20 @@
-import OpenAI from 'openai';
 import { CodeAnalysis } from './CodeAnalyzer.js';
 import { ArchitectureAnalysis } from './ArchitectureExtractor.js';
+import { createLLMClient, getDefaultModel, isLocalProvider } from '../llm/client.js';
 
 export interface CompetitiveReport {
   summary: string;
   strengths: string[];
   weaknesses: string[];
-  threatToForge: string;
+  marketImpact: string;
   recommendation: string;
 }
 
 export class CompetitiveReportGenerator {
-  private openai: OpenAI;
+  private llm: ReturnType<typeof createLLMClient>;
 
   constructor() {
-    this.openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-    });
+    this.llm = createLLMClient();
   }
 
   /**
@@ -32,16 +30,14 @@ export class CompetitiveReportGenerator {
     const prompt = this.buildPrompt(title, description, codeAnalysis, archAnalysis, readmeContent);
 
     try {
-      const response = await this.openai.chat.completions.create({
-        model: 'gpt-4o-mini',
+      const response = await this.llm.chat.completions.create({
+        model: getDefaultModel(),
         messages: [
           {
             role: 'system',
-            content: `You are a competitive intelligence analyst for FORGE, an autonomous software development platform.
-FORGE has 24 specialized AI agents that autonomously generate production-ready code across the full SDLC.
-FORGE's key differentiators: 11 governance heuristics, legacy migration (10 languages), $0.02/project cost.
-Analyze the competitor and assess their threat to FORGE's market position.
-Respond in JSON format with: summary, strengths (array), weaknesses (array), threatToForge, recommendation.`
+            content: `You are a competitive intelligence analyst for RRDA, a research and analysis platform focused on developer tools, AI software systems, and engineering automation.
+Analyze the project and assess its market relevance, strengths, weaknesses, and why it matters.
+Respond in JSON format with: summary, strengths (array), weaknesses (array), marketImpact, recommendation.`
           },
           {
             role: 'user',
@@ -50,18 +46,18 @@ Respond in JSON format with: summary, strengths (array), weaknesses (array), thr
         ],
         temperature: 0.3,
         max_tokens: 1000,
-        response_format: { type: 'json_object' },
+        ...(isLocalProvider() ? {} : { response_format: { type: 'json_object' as const } }),
       });
 
       const content = response.choices[0]?.message?.content;
       if (!content) throw new Error('Empty AI response');
 
-      const parsed = JSON.parse(content);
+      const parsed = JSON.parse(this.cleanJsonResponse(content));
       return {
         summary: parsed.summary || 'Analysis unavailable',
         strengths: parsed.strengths || [],
         weaknesses: parsed.weaknesses || [],
-        threatToForge: parsed.threatToForge || 'Unknown',
+        marketImpact: parsed.marketImpact || 'Unknown',
         recommendation: parsed.recommendation || 'Monitor',
       };
 
@@ -71,7 +67,7 @@ Respond in JSON format with: summary, strengths (array), weaknesses (array), thr
         summary: `Code analysis of ${title}: ${codeAnalysis.totalLOC} LOC across ${Object.keys(codeAnalysis.languages).length} languages. ${archAnalysis.architecturePattern} architecture.`,
         strengths: archAnalysis.frameworks.map(f => `Uses ${f}`),
         weaknesses: [],
-        threatToForge: 'Unable to assess — AI analysis failed',
+        marketImpact: 'Unable to assess — AI analysis failed',
         recommendation: 'Manual review required',
       };
     }
@@ -115,7 +111,19 @@ ${arch.signals.map(s => `- ${s}`).join('\n')}
 
 ${readme ? `## README (first 2000 chars)\n${readme.substring(0, 2000)}` : ''}
 
-Analyze this competitor's threat to FORGE and provide your assessment as JSON.
+Assess this project’s market impact and provide your analysis as JSON.
 `.trim();
+  }
+
+  private cleanJsonResponse(content: string): string {
+    const withoutFences = content.replace(/```json|```/gi, '').trim();
+    const firstBrace = withoutFences.indexOf('{');
+    const lastBrace = withoutFences.lastIndexOf('}');
+
+    if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+      return withoutFences.slice(firstBrace, lastBrace + 1);
+    }
+
+    return withoutFences;
   }
 }

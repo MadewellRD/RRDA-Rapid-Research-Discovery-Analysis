@@ -102,7 +102,7 @@ export class DeepAnalysisPipeline {
         );
 
         // 7. Store in database
-        const aiSummary = `${report.summary}\n\nStrengths: ${report.strengths.join('; ')}\n\nWeaknesses: ${report.weaknesses.join('; ')}\n\nThreat to FORGE: ${report.threatToForge}\n\nRecommendation: ${report.recommendation}`;
+        const aiSummary = `${report.summary}\n\nStrengths: ${report.strengths.join('; ')}\n\nWeaknesses: ${report.weaknesses.join('; ')}\n\nMarket Impact: ${report.marketImpact}\n\nRecommendation: ${report.recommendation}`;
 
         await this.pool.query(`
           INSERT INTO deep_analyses (

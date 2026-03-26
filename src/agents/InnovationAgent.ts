@@ -1,7 +1,7 @@
 /**
  * Innovation Agent
  * 
- * Sits between RDA (intelligence) and FORGE (production).
+ * Synthesizes recent intelligence into candidate product ideas.
  * Instead of cloning discovered projects, it synthesizes trends
  * and identifies GAPS — things that don't exist yet but should.
  * 
@@ -11,14 +11,13 @@
  *   3. Creative synthesis — identify gaps, unserved needs, novel combinations
  *   4. Generate original project proposal
  *   5. Novelty check
- *   6. Auto-trigger FORGE with original spec
+ *   6. Store proposal for review
  * 
  * This is the "product visionary" in the autonomous software team.
  */
 import { getPool } from '../database/pool.js';
-import { FORGEClient, ForgeProjectRequest } from '../integrations/FORGEClient.js';
 import { SlackNotifier } from '../notifiers/SlackNotifier.js';
-import OpenAI from 'openai';
+import { createLLMClient, getDefaultModel, getCreativeModel } from '../llm/client.js';
 
 // ─── Types ──────────────────────────────────────────────────────────
 
@@ -32,8 +31,7 @@ export interface ProjectProposal {
   capabilities: string[];
   noveltyScore: number;
   reasoning: string;
-  status: 'proposed' | 'approved' | 'building' | 'completed' | 'rejected';
-  forgeProjectId?: string;
+  status: 'proposed' | 'in_review' | 'accepted' | 'archived';
   createdAt?: Date;
 }
 
@@ -53,19 +51,17 @@ interface DiscoveryCluster {
 // ─── Agent ──────────────────────────────────────────────────────────
 
 export class InnovationAgent {
-  private openai: OpenAI;
-  private forge: FORGEClient;
+  private llm: ReturnType<typeof createLLMClient>;
   private slack: SlackNotifier;
   private model: string;
   private creativeModel: string;
   private lastRunAt: Date | null = null;
 
   constructor() {
-    this.openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-    this.forge = new FORGEClient();
+    this.llm = createLLMClient();
     this.slack = new SlackNotifier();
-    this.model = process.env.INNOVATION_MODEL || 'gpt-4o-mini';
-    this.creativeModel = process.env.INNOVATION_CREATIVE_MODEL || 'gpt-4o';
+    this.model = getDefaultModel();
+    this.creativeModel = getCreativeModel();
   }
 
   // ─── Main Loop ──────────────────────────────────────────────────
@@ -128,17 +124,7 @@ export class InnovationAgent {
       proposal.id = proposalId;
       console.log(`[STORED] Proposal #${proposalId}`);
 
-      // 6. Auto-trigger FORGE
-      const forgeProject = await this.triggerForge(proposal);
-      if (forgeProject) {
-        proposal.forgeProjectId = forgeProject.projectId;
-        proposal.status = 'building';
-        await this.updateProposalStatus(proposalId, 'building', forgeProject.projectId);
-        console.log(`[FORGE] Project created: ${forgeProject.projectId}`);
-
-        // Notify
-        await this.notifyProposal(proposal).catch(() => {});
-      }
+      await this.notifyProposal(proposal).catch(() => {});
 
       const elapsed = ((Date.now() - cycleStart) / 1000).toFixed(1);
       console.log(`[COMPLETE] Innovation cycle finished in ${elapsed}s`);
@@ -178,7 +164,7 @@ export class InnovationAgent {
       `[${d.source}] ${d.title}: ${(d.description || d.summary || '').substring(0, 150)}`
     ).join('\n');
 
-    const response = await this.openai.chat.completions.create({
+    const response = await this.llm.chat.completions.create({
       model: this.model,
       temperature: 0.3,
       messages: [{
@@ -240,7 +226,7 @@ Return ONLY valid JSON — no markdown, no backticks:
       ? `\n\nAVOID these concepts (already proposed recently):\n${recentProposals.map(p => `- ${p.name}: ${p.concept}`).join('\n')}`
       : '';
 
-    const response = await this.openai.chat.completions.create({
+    const response = await this.llm.chat.completions.create({
       model: this.creativeModel,
       temperature: 0.9, // High creativity
       messages: [{
@@ -321,7 +307,7 @@ If you cannot identify a genuinely novel concept from the data, return: {"skip":
     // Use LLM to check semantic similarity
     const existing = result.rows.map((r: any) => `${r.name}: ${r.concept}`).join('\n');
     
-    const response = await this.openai.chat.completions.create({
+    const response = await this.llm.chat.completions.create({
       model: this.model,
       temperature: 0,
       messages: [{
@@ -334,41 +320,6 @@ If you cannot identify a genuinely novel concept from the data, return: {"skip":
     });
 
     return (response.choices[0].message.content || '').toLowerCase().includes('duplicate');
-  }
-
-  // ─── FORGE Integration ────────────────────────────────────────
-
-  private async triggerForge(proposal: ProjectProposal): Promise<any | null> {
-    const healthy = await this.forge.healthCheck();
-    if (!healthy) {
-      console.error('[FORGE] API unreachable — skipping trigger');
-      return null;
-    }
-
-    const request: ForgeProjectRequest = {
-      name: proposal.name,
-      description: [
-        proposal.concept,
-        `\nProblem: ${proposal.problemStatement}`,
-        `\nTarget Users: ${proposal.targetUsers}`,
-        `\nCapabilities:\n${proposal.capabilities.map(c => `- ${c}`).join('\n')}`,
-      ].join('\n').substring(0, 2000),
-      type: this.inferType(proposal),
-    };
-
-    try {
-      return await this.forge.createProject(request);
-    } catch (err: any) {
-      console.error(`[FORGE] Trigger failed: ${err.message}`);
-      return null;
-    }
-  }
-
-  private inferType(proposal: ProjectProposal): ForgeProjectRequest['type'] {
-    const text = `${proposal.concept} ${proposal.capabilities.join(' ')}`.toLowerCase();
-    if (text.includes('frontend') || text.includes('dashboard') || text.includes('ui')) return 'fullstack';
-    if (text.includes('microservice') || text.includes('distributed')) return 'microservices';
-    return 'api';
   }
 
   // ─── Database ─────────────────────────────────────────────────
@@ -394,14 +345,6 @@ If you cannot identify a genuinely novel concept from the data, return: {"skip":
       ]
     );
     return result.rows[0].id;
-  }
-
-  private async updateProposalStatus(id: number, status: string, forgeProjectId?: string): Promise<void> {
-    const pool = getPool();
-    await pool.query(
-      `UPDATE innovation_proposals SET status = $1, forge_project_id = $2 WHERE id = $3`,
-      [status, forgeProjectId || null, id]
-    );
   }
 
   private async getRecentProposals(limit: number): Promise<any[]> {
@@ -433,7 +376,7 @@ If you cannot identify a genuinely novel concept from the data, return: {"skip":
         `Capabilities: ${proposal.capabilities.join(', ')}`,
         ``,
         `Inspired by: ${proposal.inspirationSources.join(', ')}`,
-        proposal.forgeProjectId ? `FORGE Project: ${proposal.forgeProjectId}` : '',
+        `Status: ${proposal.status}`,
       ].join('\n'),
     }).catch(() => {});
   }

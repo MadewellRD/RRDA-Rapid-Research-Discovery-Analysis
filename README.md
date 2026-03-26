@@ -1,68 +1,100 @@
-# Step 1: RDA → FORGE Autonomous Integration
+# RRDA
 
-## What This Does
+RRDA, short for Rapid Research Development Analysis, is an open-source intelligence workspace for engineering teams tracking developer tools, AI software systems, and market-moving technical signals.
 
-Wires the autonomous innovation loop: when RDA discovers a HIGH+ competitive 
-threat (threat_score ≥ 7.5), it automatically calls the FORGE API to generate 
-a counter-capability. ~30 seconds, ~$0.02 per response.
+It continuously collects public discoveries, scores them for relevance, stores deep analyses, and synthesizes proposal candidates from emerging trends. The repo now ships with:
 
-## What Changed
+- a TypeScript API server
+- a React web interface
+- PostgreSQL-backed storage
+- source scanners for GitHub, Hacker News, Reddit, and ArXiv
+- deep-analysis and proposal-generation workflows
 
-| File | Change |
-|------|--------|
-| `src/database/pool.ts` | NEW — shared database pool (may exist from punchlist) |
-| `src/integrations/FORGEClient.ts` | REPLACED — Bearer auth, idempotency, retry, health check |
-| `src/integrations/AutonomousResponseOrchestrator.ts` | REPLACED — shared pool, non-crashing failures, proper logging |
-| `src/scheduler/index.ts` | REPLACED — fixed assess→store→trigger flow, PT timezone, clean shutdown |
-| `scripts/trigger-forge.ts` | NEW — CLI tool for manual testing |
-| `scripts/migrate-response-actions.sql` | NEW — idempotent DB migration |
+## Quickstart
 
-## Key Fixes
-
-1. **Auth**: FORGEClient now sends `Authorization: Bearer <token>` on all API calls
-2. **Flow bug**: Old scheduler checked `intelligence_level` on raw scanner output (before assessment). Now: scan → assess → store → trigger
-3. **Idempotency**: Won't re-trigger FORGE for a discovery that already has an active response_action
-4. **Retry**: 3 attempts with exponential backoff on FORGE API failures
-5. **Non-crashing**: FORGE failures don't crash the scanner — logged, tracked, Slack-notified
-6. **Shared pool**: Single database pool instead of per-class Pool() instances
-
-## Deploy
+### Docker
 
 ```bash
-cd /opt/PROMETHEUS/production/rda-production
-unzip -o RDA_FORGE_INTEGRATION.zip
-bash deploy.sh
-# Edit .env — set FORGE_API_TOKEN
-sudo systemctl restart rda
+cp .env.example .env
+docker compose up --build
 ```
 
-## Validate
+API: `http://localhost:4000`
+
+Web: `http://localhost:4173`
+
+### Native
 
 ```bash
-# 1. Health check
-npx ts-node scripts/trigger-forge.ts --health
-
-# 2. Show HIGH+ discoveries
-npx ts-node scripts/trigger-forge.ts
-
-# 3. Test with synthetic threat
-npx ts-node scripts/trigger-forge.ts --test
-
-# 4. Trigger specific discovery
-npx ts-node scripts/trigger-forge.ts --discovery-id 42
-
-# 5. Dry run (no FORGE call)
-npx ts-node scripts/trigger-forge.ts --test --dry-run
+cp .env.example .env
+npm ci
+cd dashboard && npm ci && cd ..
+npm run build
 ```
 
-## Environment Variables
+Run the API:
 
-Add to `/opt/PROMETHEUS/production/rda-production/.env`:
+```bash
+npm run dev:api
+```
 
+Run the scheduler:
+
+```bash
+npm run dev:scheduler
 ```
-FORGE_API_URL=https://forge-api.madewellrd.com
-FORGE_API_TOKEN=<must-match-FORGE_BEARER_TOKEN-in-forge-.env>
-FORGE_TRIGGER_THRESHOLD=7.5
-FORGE_MAX_RETRIES=3
-AUTONOMOUS_RESPONSE_ENABLED=true
+
+Run the web app:
+
+```bash
+cd dashboard
+npm run dev
 ```
+
+## Demo Data
+
+To populate the UI quickly in a fresh database:
+
+```bash
+npm run seed:demo
+```
+
+## Environment
+
+Key variables:
+
+- `DATABASE_URL`
+- `RDA_API_PORT`
+- `CORS_ORIGIN`
+- `LLM_PROVIDER`
+- `OPENAI_API_KEY`
+- `BITNET_BASE_URL`
+- `BITNET_MODEL`
+- `GITHUB_TOKEN_1`
+- `SLACK_WEBHOOK_URL`
+
+The full list lives in [.env.example](/opt/repos/RRDA-Rapid-Research-Development-Analysis/.env.example).
+
+## API
+
+Important endpoints:
+
+- `GET /health`
+- `GET /api/v1/stats`
+- `GET /api/v1/discoveries`
+- `GET /api/v1/discoveries/:id`
+- `GET /api/v1/reports/deep-analyses`
+- `GET /api/v1/proposals`
+- `GET /api/v1/sources`
+- `GET /api/v1/jobs`
+- `POST /api/v1/admin/scans`
+
+## Development Notes
+
+- The root package owns the API, scheduler, scanners, and analysis pipeline.
+- The [`dashboard`](/opt/repos/RRDA-Rapid-Research-Development-Analysis/dashboard) app is a separate Vite/React frontend.
+- The checked-in schema is in [`src/database/schema.sql`](/opt/repos/RRDA-Rapid-Research-Development-Analysis/src/database/schema.sql).
+
+## Open Source
+
+RRDA is released under Apache-2.0. See [LICENSE](/opt/repos/RRDA-Rapid-Research-Development-Analysis/LICENSE).

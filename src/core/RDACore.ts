@@ -1,26 +1,24 @@
 import dotenv from 'dotenv';
 import { Pool } from 'pg';
-import OpenAI from 'openai';
 import { GitHubScanner } from '../scanners/GitHubScanner.js';
 import { Discovery, IntelligenceLevel } from '../types/index.js';
 import { getPool } from '../database/pool.js';
+import { createLLMClient, getDefaultModel, isLocalProvider } from '../llm/client.js';
 
 // Load env vars
 dotenv.config();
 
 export class RDACore {
   private pool: Pool;
-  private openai: OpenAI;
+  private llm: ReturnType<typeof createLLMClient>;
   private githubScanner: GitHubScanner;
 
   constructor() {
     // Shared database pool
     this.pool = getPool();
 
-    // OpenAI for intelligence analysis
-    this.openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-    });
+    // LLM for intelligence analysis (OpenAI or BitNet)
+    this.llm = createLLMClient();
 
     // GitHub scanner
     this.githubScanner = new GitHubScanner();
@@ -37,7 +35,7 @@ export class RDACore {
       discovery.metadata = { _truncated: true, originalSize: metadataStr.length };
     }
 
-    const prompt = `You are MadewellRD's Research & Development Agent (RDA). Assess this discovery's strategic value.
+    const prompt = `You are RRDA, an autonomous research and competitive-intelligence analyst for developer tools and AI software systems. Assess this discovery's strategic value.
 
 Discovery:
 Source: ${discovery.source}
@@ -47,15 +45,15 @@ URL: ${discovery.url}
 Stars: ${discovery.stars || 0}
 Metadata: ${JSON.stringify(discovery.metadata, null, 2)}
 
-MadewellRD's Core Business:
-- FORGE: Autonomous Software Development platform with 24 specialized agents
-- Legacy system modernization (COBOL, FORTRAN → Modern languages)
-- AI-powered code generation
-- Target market: Enterprise software development automation
+RRDA Focus Areas:
+- AI developer tooling and autonomous software systems
+- Software delivery automation and developer platforms
+- Code generation, orchestration, governance, testing, and observability
+- Signals that matter to engineering teams evaluating modern software tooling
 
 Assess this discovery on:
-1. Competitive Threat (0-10): How much does this threaten FORGE?
-2. Opportunity Value (0-10): How valuable is this for us?
+1. Competitive Threat (0-10): How important is this as a market signal or competitive move?
+2. Opportunity Value (0-10): How valuable is this for future RRDA analysis, coverage, or product direction?
 3. Intelligence Level: CRITICAL, HIGH, MEDIUM, LOW, or NOISE
 4. Recommended Action: What should we do?
 
@@ -70,13 +68,13 @@ Respond with valid JSON (no markdown):
   "level": "HIGH",
   "threatScore": 7.5,
   "opportunityScore": 8.0,
-  "reasoning": "This is a novel approach to X that could be integrated into FORGE's Y agent...",
-  "recommendedAction": "Clone repo and analyze architecture for potential integration",
+  "reasoning": "This is a strong signal because...",
+  "recommendedAction": "Analyze architecture, track the team, and compare differentiation",
   "shouldAnalyzeDeep": true
 }`;
 
-    const completion = await this.openai.chat.completions.create({
-      model: 'gpt-4o-mini',
+    const completion = await this.llm.chat.completions.create({
+      model: getDefaultModel(),
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.3,
     });
@@ -84,9 +82,13 @@ Respond with valid JSON (no markdown):
     let content = completion.choices[0].message.content!;
     content = this.cleanJsonResponse(content);
 
-    const tokens = completion.usage?.total_tokens || 0;
-    const cost = (tokens * 0.00000015).toFixed(6);
-    console.log(`   💰 Assessment cost: $${cost}`);
+    if (isLocalProvider()) {
+      console.log(`   💰 Local inference (free)`);
+    } else {
+      const tokens = completion.usage?.total_tokens || 0;
+      const cost = (tokens * 0.00000015).toFixed(6);
+      console.log(`   💰 Assessment cost: $${cost}`);
+    }
 
     return JSON.parse(content);
   }

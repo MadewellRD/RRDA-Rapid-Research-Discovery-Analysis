@@ -1,8 +1,7 @@
 /**
  * Shared database pool — singleton for the entire RDA process.
  *
- * Previously every class (RDACore, AlertOrchestrator, ReportGenerator,
- * AutonomousResponseOrchestrator) created its own `new Pool()`.
+ * Previously multiple classes created their own `new Pool()`.
  * That wastes connections and makes graceful shutdown unreliable.
  *
  * Usage:

@@ -1,0 +1,37 @@
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: rda_intelligence
+      POSTGRES_USER: rda_user
+      POSTGRES_PASSWORD: rda_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  api:
+    build: .
+    environment:
+      DATABASE_URL: postgresql://rda_user:rda_password@postgres:5432/rda_intelligence
+      RDA_API_PORT: 4000
+      CORS_ORIGIN: http://localhost:4173
+      LLM_PROVIDER: bitnet
+      BITNET_BASE_URL: http://host.docker.internal:8080/v1
+      BITNET_MODEL: bitnet-b1.58-2B-4T
+    ports:
+      - "4000:4000"
+    depends_on:
+      - postgres
+
+  web:
+    build: ./dashboard
+    environment:
+      VITE_RRDA_API_URL: http://localhost:4000
+    ports:
+      - "4173:4173"
+    depends_on:
+      - api
+
+volumes:
+  pgdata:

@@ -1,3 +1,6 @@
+export type JsonPrimitive = string | number | boolean | null;
+export type JsonValue = JsonPrimitive | JsonValue[] | { [key: string]: JsonValue };
+
 export interface Discovery {
   id?: number;
   source: string;
@@ -34,4 +37,26 @@ export interface ScanResult {
   discoveries: Discovery[];
   source: string;
   scannedAt: Date;
+}
+
+export interface CompetitiveAnalysisSummary {
+  summary: string;
+  strengths: string[];
+  weaknesses: string[];
+  marketImpact: string;
+  recommendation: string;
+}
+
+export interface InnovationProposal {
+  id?: number;
+  name: string;
+  concept: string;
+  problemStatement: string;
+  inspirationSources: string[];
+  targetUsers: string;
+  capabilities: string[];
+  noveltyScore: number;
+  reasoning: string;
+  status: 'proposed' | 'in_review' | 'accepted' | 'archived';
+  createdAt?: Date;
 }

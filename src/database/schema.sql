@@ -42,12 +42,28 @@ CREATE INDEX idx_discoveries_threat ON discoveries(threat_score DESC);
 CREATE INDEX idx_discoveries_opportunity ON discoveries(opportunity_score DESC);
 
 -- Deep analyses
-CREATE TABLE IF NOT EXISTS analyses (
+CREATE TABLE IF NOT EXISTS deep_analyses (
     id SERIAL PRIMARY KEY,
     discovery_id INT REFERENCES discoveries(id) ON DELETE CASCADE,
     analyzed_at TIMESTAMP DEFAULT NOW(),
-    
-    -- Analysis results
+
+    -- Detailed analysis results
+    repo_url TEXT,
+    total_loc INT DEFAULT 0,
+    file_count INT DEFAULT 0,
+    frameworks JSONB,
+    architecture_pattern TEXT,
+    has_ci_cd BOOLEAN DEFAULT FALSE,
+    has_tests BOOLEAN DEFAULT FALSE,
+    has_docker BOOLEAN DEFAULT FALSE,
+    has_ai_deps BOOLEAN DEFAULT FALSE,
+    dependency_count INT DEFAULT 0,
+    readme_summary TEXT,
+    ai_competitive_analysis TEXT,
+    clone_size_mb DECIMAL(10,2),
+    analysis_duration_ms INT,
+
+    -- Legacy-compatible fields
     summary TEXT,
     architecture TEXT,
     languages JSONB,
@@ -66,8 +82,8 @@ CREATE TABLE IF NOT EXISTS analyses (
     tokens_used INT
 );
 
-CREATE INDEX idx_analyses_discovery ON analyses(discovery_id);
-CREATE INDEX idx_analyses_date ON analyses(analyzed_at DESC);
+CREATE INDEX idx_deep_analyses_discovery ON deep_analyses(discovery_id);
+CREATE INDEX idx_deep_analyses_date ON deep_analyses(analyzed_at DESC);
 
 -- Cross-source correlations
 CREATE TABLE IF NOT EXISTS correlations (
@@ -179,22 +195,20 @@ ON CONFLICT (name) DO NOTHING;
 INSERT INTO metrics (date) VALUES (CURRENT_DATE)
 ON CONFLICT (date) DO NOTHING;
 
--- ═══════════════════════════════════════════════════════════════
--- RDA → FORGE Integration: Response Actions
--- Tracks autonomous responses triggered by RDA discoveries
--- ═══════════════════════════════════════════════════════════════
-
-CREATE TABLE IF NOT EXISTS response_actions (
+-- Innovation proposals synthesized from recent signals
+CREATE TABLE IF NOT EXISTS innovation_proposals (
   id SERIAL PRIMARY KEY,
-  discovery_id INTEGER REFERENCES discoveries(id),
-  action_type VARCHAR(50) NOT NULL,
-  status VARCHAR(20) NOT NULL DEFAULT 'initiated',
-  forge_project_id VARCHAR(100),
-  result JSONB,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  completed_at TIMESTAMPTZ
+  name VARCHAR(100) NOT NULL,
+  concept TEXT NOT NULL,
+  problem_statement TEXT,
+  inspiration_sources JSONB DEFAULT '[]',
+  target_users TEXT,
+  capabilities JSONB DEFAULT '[]',
+  novelty_score INTEGER DEFAULT 5,
+  reasoning TEXT,
+  status VARCHAR(20) DEFAULT 'proposed',
+  created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX IF NOT EXISTS idx_response_actions_discovery ON response_actions(discovery_id);
-CREATE INDEX IF NOT EXISTS idx_response_actions_status ON response_actions(status);
-CREATE INDEX IF NOT EXISTS idx_response_actions_created ON response_actions(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_innovation_proposals_status ON innovation_proposals(status);
+CREATE INDEX IF NOT EXISTS idx_innovation_proposals_created ON innovation_proposals(created_at DESC);
