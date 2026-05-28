@@ -2,6 +2,7 @@
   "name": "@madewellrd/rda",
   "version": "2.0.0",
   "description": "RRDA - Rapid Research Development Analysis for open-source competitive intelligence",
+  "license": "Apache-2.0",
   "main": "dist/server/index.js",
   "type": "module",
   "scripts": {
