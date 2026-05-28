@@ -1,3 +1,9 @@
+﻿<div align="center">
+
+![](.github/rrda-banner.png)
+
+</div>
+
 ```
                                           /$$$$$$   /$$$$$$   /$$$$$$$   /$$$$$$
                                          /$$__  $$ /$$__  $$ | $$__  $$ /$$__  $$
@@ -42,7 +48,7 @@
 [![LLM](https://img.shields.io/badge/LLM-OpenAI%20%7C%20BitNet-orange.svg)](#configuration)
 [![Sources](https://img.shields.io/badge/sources-GitHub%20%7C%20HN%20%7C%20Reddit%20%7C%20ArXiv-red.svg)](#running-scans-manually)
 
-**Rapid Research Development Analysis** — open-source competitive intelligence for engineering teams.
+**Rapid Research Development Analysis** â€” open-source competitive intelligence for engineering teams.
 
 *Scan. Score. Synthesize. Ship.*
 
@@ -54,12 +60,12 @@ RRDA continuously collects public signals from GitHub, Hacker News, Reddit, and 
 
 ## What it does
 
-- **Scans** four public sources on configurable schedules — GitHub every 15 min, HN hourly, Reddit every 6 hours, ArXiv daily
+- **Scans** four public sources on configurable schedules â€” GitHub every 15 min, HN hourly, Reddit every 6 hours, ArXiv daily
 - **Filters** discoveries against a domain keyword list before spending LLM tokens on assessment
-- **Scores** each discovery with threat and opportunity scores (0–10) and classifies it as CRITICAL / HIGH / MEDIUM / LOW / NOISE
+- **Scores** each discovery with threat and opportunity scores (0â€“10) and classifies it as CRITICAL / HIGH / MEDIUM / LOW / NOISE
 - **Deep-analyzes** HIGH+ GitHub repositories by cloning them, counting LOC by language, extracting architecture patterns, and generating a competitive summary
 - **Proposes** novel product ideas every 20 minutes by clustering recent signals and running a creative synthesis pass
-- **Alerts** via Slack and email — immediate for CRITICAL, batched daily digest and weekly report for everything else
+- **Alerts** via Slack and email â€” immediate for CRITICAL, batched daily digest and weekly report for everything else
 - **Exposes** a REST API and React dashboard for browsing everything
 
 ## Quickstart
@@ -68,7 +74,7 @@ RRDA continuously collects public signals from GitHub, Hacker News, Reddit, and 
 
 ```bash
 cp .env.example .env
-# edit .env — at minimum set OPENAI_API_KEY and GITHUB_TOKEN_1
+# edit .env â€” at minimum set OPENAI_API_KEY and GITHUB_TOKEN_1
 docker compose up --build
 ```
 
@@ -117,7 +123,7 @@ Copy `.env.example` to `.env` and fill in the values. The minimum viable set:
 |---|---|---|
 | `DATABASE_URL` | yes | PostgreSQL connection string |
 | `OPENAI_API_KEY` | yes* | Used for discovery scoring and analysis |
-| `GITHUB_TOKEN_1` | recommended | GitHub PAT — unauthenticated rate limits are very low |
+| `GITHUB_TOKEN_1` | recommended | GitHub PAT â€” unauthenticated rate limits are very low |
 | `SLACK_WEBHOOK_URL` | optional | Incoming webhook for alerts |
 | `SMTP_HOST` / `SMTP_USER` / `SMTP_PASSWORD` | optional | Email alerts |
 | `ALERT_EMAIL` | optional | Recipient for email digests |
@@ -174,14 +180,14 @@ npm run alerts:weekly   # send weekly report immediately
 
 ```
 src/
-  agents/          InnovationAgent — trend synthesis and proposal generation
-  analyzers/       Deep analysis pipeline (clone → LOC → architecture → AI report)
-  core/            RDACore — LLM assessment and discovery storage
+  agents/          InnovationAgent â€” trend synthesis and proposal generation
+  analyzers/       Deep analysis pipeline (clone â†’ LOC â†’ architecture â†’ AI report)
+  core/            RDACore â€” LLM assessment and discovery storage
   database/        Shared connection pool and schema.sql
   llm/             LLM client factory (OpenAI or local BitNet)
   notifiers/       Slack, email, alert orchestration, report generation
   scanners/        GitHub, HackerNews, Reddit, ArXiv scanners + CLI runner
-  scheduler/       InnovationScheduler — cron wiring for all loops
+  scheduler/       InnovationScheduler â€” cron wiring for all loops
   scripts/         seed-demo, run-deep-analysis
   server/          Express REST API
   types/           Shared TypeScript interfaces
