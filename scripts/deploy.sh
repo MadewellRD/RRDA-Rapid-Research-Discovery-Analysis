@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-DEPLOY_DIR="/opt/PROMETHEUS/production/rda-production"
+# Set DEPLOY_DIR to wherever you've cloned this repo on your server.
+DEPLOY_DIR="${DEPLOY_DIR:-$(pwd)}"
 HEALTH_TIMEOUT=10
 MAX_RETRIES=3
 
@@ -31,20 +32,20 @@ npm ci --production --ignore-scripts 2>&1 | tail -3
 echo "🔨 Building TypeScript..."
 npm run build 2>&1 | tail -5
 
-echo "🔄 Restarting RDA services..."
-sudo systemctl restart rda
-sudo systemctl restart rda-dashboard
+echo "🔄 Restarting RRDA services..."
+sudo systemctl restart rrda
+sudo systemctl restart rrda-dashboard
 
 echo "🏥 Waiting ${HEALTH_TIMEOUT}s for services to start..."
 sleep "$HEALTH_TIMEOUT"
 
 HEALTHY=false
 for i in $(seq 1 $MAX_RETRIES); do
-  if systemctl is-active --quiet rda; then
+  if systemctl is-active --quiet rrda; then
     HEALTHY=true
     break
   fi
-  echo "  Attempt $i/$MAX_RETRIES: rda not active (retrying in 5s...)"
+  echo "  Attempt $i/$MAX_RETRIES: rrda not active (retrying in 5s...)"
   sleep 5
 done
 
@@ -53,12 +54,12 @@ if [ "$HEALTHY" = true ]; then
   exit 0
 fi
 
-echo "❌ RDA service failed. Rolling back to ${PREV_COMMIT:0:8}..."
+echo "❌ RRDA service failed. Rolling back to ${PREV_COMMIT:0:8}..."
 git checkout "$PREV_COMMIT"
 npm ci --production --ignore-scripts 2>&1 | tail -3
 npm run build 2>&1 | tail -5
-sudo systemctl restart rda
-sudo systemctl restart rda-dashboard
+sudo systemctl restart rrda
+sudo systemctl restart rrda-dashboard
 sleep "$HEALTH_TIMEOUT"
 
 echo "  ❌ Deploy FAILED — Rolled back to ${PREV_COMMIT:0:8}"

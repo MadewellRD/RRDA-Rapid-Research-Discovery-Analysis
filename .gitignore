@@ -7,7 +7,6 @@ dist/
 # Environment files (secrets)
 .env
 .env.production
-.env.forge-integration
 
 # Cloned repos (RDA output)
 clones/
