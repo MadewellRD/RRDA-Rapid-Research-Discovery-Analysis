@@ -1,12 +1,60 @@
-# RRDA
+```
+                                          /$$$$$$   /$$$$$$   /$$$$$$$   /$$$$$$
+                                         /$$__  $$ /$$__  $$ | $$__  $$ /$$__  $$
+                                        | $$  \__/| $$  \__/ | $$  \ $$| $$  \ $$
+                                        | $$      |  $$$$$$  | $$$$$$$/| $$  | $$
+                                        | $$       \____  $$ | $$____/ | $$  | $$
+                                        | $$    $$ /$$  \ $$ | $$      | $$  | $$
+                                        |  $$$$$$/|  $$$$$$/ | $$      |  $$$$$$/
+                                         \______/  \______/  |__/       \______/
+
+
+ /$$$$$$$$                      /$$       /$$                                                                   /$$
+| $$_____/                     |__/      | $$                                                                  | $$
+| $$       /$$$$$$   /$$$$$$  /$$  /$$$$$$$      /$$$$$$   /$$$$$$   /$$$$$$$  /$$$$$$   /$$$$$$   /$$$$$$   /$$$$$$    /$$$$$$
+| $$$$$   |____  $$ /$$__  $$| $$ /$$__  $$     /$$__  $$ /$$__  $$ /$$_____/ /$$__  $$ |____  $$ /$$__  $$ |_  $$_/   /$$__  $$
+| $$__/    /$$$$$$$| $$  \__/| $$| $$  | $$    | $$  \__/| $$$$$$$$|  $$$$$$ | $$$$$$$$  /$$$$$$$| $$  \__/   | $$    | $$$$$$$$
+| $$      /$$__  $$| $$      | $$| $$  | $$    | $$      | $$_____/ \____  $$| $$_____/ /$$__  $$| $$         | $$ /$$| $$_____/
+| $$$$$$$$|  $$$$$$$| $$      | $$|  $$$$$$$    | $$      |  $$$$$$$ /$$$$$$$/|  $$$$$$$|  $$$$$$$| $$         |  $$$$/|  $$$$$$$
+|________/ \_______/|__/      |__/ \_______/    |__/       \_______/|_______/  \_______/ \_______/|__/          \___/   \_______/
+
+
+ /$$$$$$                                /$$                        /$$
+/$$__  $$                              | $$                       |__/
+| $$  \ $$  /$$$$$$  /$$$$$$$ /$$   /$$| $$ /$$   /$$  /$$$$$$$ /$$  /$$$$$$$
+| $$$$$$$$ |____  $$| $$__  $$| $$  | $$| $$| $$  | $$ /$$_____/| $$ /$$_____/
+| $$__  $$  /$$$$$$$| $$  \ $$| $$  | $$| $$| $$  | $$|  $$$$$$ | $$|  $$$$$$
+| $$  | $$ /$$__  $$| $$  | $$| $$  | $$| $$| $$  | $$ \____  $$| $$ \____  $$
+| $$  | $$|  $$$$$$$| $$  | $$|  $$$$$$$| $$|  $$$$$$$ /$$$$$$$/ | $$ /$$$$$$$/
+|__/  |__/ \_______/|__/  |__/ \____  $$|__/ \____  $$|_______/  |__/|_______/
+                                /$$  | $$     /$$  | $$
+                               |  $$$$$$/    |  $$$$$$/
+                                \______/      \______/
+```
+
+<div align="center">
+
+[![CI](https://github.com/MadewellRD/RRDA-Rapid-Research-Development-Analysis/actions/workflows/ci.yml/badge.svg)](https://github.com/MadewellRD/RRDA-Rapid-Research-Development-Analysis/actions/workflows/ci.yml)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+[![Node](https://img.shields.io/badge/node-20%2B-brightgreen.svg)](https://nodejs.org)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178c6.svg)](https://www.typescriptlang.org)
+[![Docker](https://img.shields.io/badge/docker-compose-2496ed.svg)](docker-compose.yml)
+[![LLM](https://img.shields.io/badge/LLM-OpenAI%20%7C%20BitNet-orange.svg)](#configuration)
+[![Sources](https://img.shields.io/badge/sources-GitHub%20%7C%20HN%20%7C%20Reddit%20%7C%20ArXiv-red.svg)](#running-scans-manually)
 
 **Rapid Research Development Analysis** — open-source competitive intelligence for engineering teams.
 
-RRDA continuously collects public signals from GitHub, Hacker News, Reddit, and ArXiv, scores each discovery for relevance, runs AI-powered deep analysis on high-value repositories, and synthesizes emerging trends into actionable product proposals via an Innovation Agent.
+*Scan. Score. Synthesize. Ship.*
+
+</div>
+
+---
+
+RRDA continuously collects public signals from GitHub, Hacker News, Reddit, and ArXiv, scores each discovery for relevance using an LLM, runs deep analysis on high-value repositories, and synthesizes emerging trends into actionable product proposals via an Innovation Agent.
 
 ## What it does
 
-- **Scans** four public sources on configurable schedules (GitHub every 15 min, HN hourly, Reddit every 6 hours, ArXiv daily)
+- **Scans** four public sources on configurable schedules — GitHub every 15 min, HN hourly, Reddit every 6 hours, ArXiv daily
 - **Filters** discoveries against a domain keyword list before spending LLM tokens on assessment
 - **Scores** each discovery with threat and opportunity scores (0–10) and classifies it as CRITICAL / HIGH / MEDIUM / LOW / NOISE
 - **Deep-analyzes** HIGH+ GitHub repositories by cloning them, counting LOC by language, extracting architecture patterns, and generating a competitive summary
