@@ -18,17 +18,17 @@ export class EmailNotifier {
 
   constructor(config?: EmailConfig) {
     const smtpConfig = config || {
-      host: process.env.SMTP_HOST || 'smtp.office365.com',
+      host: process.env.SMTP_HOST || 'smtp.example.com',
       port: parseInt(process.env.SMTP_PORT || '587'),
       user: process.env.SMTP_USER || '',
       password: process.env.SMTP_PASSWORD || '',
       from: process.env.SMTP_USER || '',
-      fromName: process.env.EMAIL_FROM_NAME || 'RDA Intelligence',
+      fromName: process.env.EMAIL_FROM_NAME || 'RRDA Intelligence',
     };
 
     this.fromAddress = smtpConfig.from;
     this.fromName = smtpConfig.fromName;
-    this.toAddress = process.env.ALERT_EMAIL || 'rda@madewellrd.com';
+    this.toAddress = process.env.ALERT_EMAIL || 'alerts@example.com';
 
     if (!smtpConfig.user || !smtpConfig.password) {
       console.warn('⚠️  Email not configured');
@@ -64,7 +64,7 @@ export class EmailNotifier {
     const mailOptions = {
       from: `"${this.fromName}" <${this.fromAddress}>`,
       to: this.toAddress,
-      subject: `RDA Daily Digest - ${stats.date.toLocaleDateString()}`,
+      subject: `RRDA Daily Digest - ${stats.date.toLocaleDateString()}`,
       html,
     };
 
@@ -90,7 +90,7 @@ export class EmailNotifier {
     const mailOptions = {
       from: `"${this.fromName}" <${this.fromAddress}>`,
       to: this.toAddress,
-      subject: `RDA Weekly Strategic Report - Week of ${report.weekStart.toLocaleDateString()}`,
+      subject: `RRDA Weekly Strategic Report - Week of ${report.weekStart.toLocaleDateString()}`,
       html,
     };
 
@@ -140,7 +140,7 @@ export class EmailNotifier {
       </div>
     </div>
     <p style="text-align: center; color: #999; margin-top: 20px;">
-      RDA Intelligence System | MadewellRD
+      RRDA Intelligence System
     </p>
   </div>
 </body>
@@ -190,7 +190,7 @@ export class EmailNotifier {
 <body>
   <div class="container">
     <div class="header">
-      <h1>📊 RDA Daily Intelligence Digest</h1>
+      <h1>📊 RRDA Daily Intelligence Digest</h1>
       <p>${stats.date.toLocaleDateString()}</p>
     </div>
     
@@ -224,7 +224,7 @@ export class EmailNotifier {
     </table>
     
     <p style="text-align: center; color: #999; margin-top: 30px;">
-      RDA Intelligence System | MadewellRD
+      RRDA Intelligence System
     </p>
   </div>
 </body>
@@ -296,8 +296,7 @@ export class EmailNotifier {
     </div>
     
     <p style="text-align: center; color: #999; margin-top: 40px;">
-      <strong>RDA Intelligence System</strong><br>
-      Autonomous Competitive Intelligence for MadewellRD
+      <strong>RRDA Intelligence System</strong>
     </p>
   </div>
 </body>

@@ -13,7 +13,7 @@ export class SlackNotifier {
 
   constructor(webhookUrl?: string) {
     this.webhookUrl = webhookUrl || process.env.SLACK_WEBHOOK_URL || '';
-    
+
     if (!this.webhookUrl) {
       console.warn('⚠️  Slack webhook URL not configured');
     } else {
@@ -49,7 +49,7 @@ export class SlackNotifier {
               short: false,
             },
           ],
-          footer: 'RDA Intelligence System',
+          footer: 'RRDA Intelligence',
           ts: Math.floor(Date.now() / 1000),
         },
       ],
@@ -86,7 +86,7 @@ export class SlackNotifier {
               short: false,
             },
           ],
-          footer: 'RDA Intelligence',
+          footer: 'RRDA Intelligence',
           ts: Math.floor(Date.now() / 1000),
         },
       ],
@@ -109,7 +109,7 @@ export class SlackNotifier {
     }).join('\n\n');
 
     const message = {
-      text: `📊 *RDA Daily Intelligence Digest*`,
+      text: `📊 *RRDA Daily Intelligence Digest*`,
       attachments: [
         {
           color: '#36A64F',
@@ -131,7 +131,7 @@ export class SlackNotifier {
             },
           ],
           text: `*Top 5 Discoveries:*\n\n${discoveries}`,
-          footer: 'RDA Daily Report',
+          footer: 'RRDA Daily Report',
           ts: Math.floor(Date.now() / 1000),
         },
       ],
@@ -141,7 +141,7 @@ export class SlackNotifier {
   }
 
   /**
-   * Send weekly investor report
+   * Send weekly report
    */
   async sendWeeklyReport(report: {
     weekStart: Date;
@@ -189,7 +189,7 @@ export class SlackNotifier {
               short: false,
             },
           ],
-          footer: 'RDA Weekly Report for Investors',
+          footer: 'RRDA Weekly Report',
           ts: Math.floor(Date.now() / 1000),
         },
       ],
@@ -215,7 +215,7 @@ export class SlackNotifier {
         {
           color: alert.color || colorMap[alert.type],
           text: alert.message,
-          footer: 'RDA Intelligence System',
+          footer: 'RRDA Intelligence',
           ts: Math.floor(Date.now() / 1000),
         },
       ],
@@ -230,12 +230,12 @@ export class SlackNotifier {
   async testConnection(): Promise<boolean> {
     try {
       const message = {
-        text: '✅ RDA Alert System Test',
+        text: '✅ RRDA Alert System Test',
         attachments: [
           {
             color: '#36A64F',
             text: 'Slack notifications are working correctly!',
-            footer: 'RDA Test',
+            footer: 'RRDA Test',
             ts: Math.floor(Date.now() / 1000),
           },
         ],

@@ -144,7 +144,7 @@ export class AlertOrchestrator {
           type,
           discoveryId,
           'slack+email',
-          process.env.ALERT_EMAIL || 'rda@madewellrd.com',
+          process.env.ALERT_EMAIL || 'alerts@example.com',
           JSON.stringify(data).substring(0, 500),
           true,
           JSON.stringify(data),
