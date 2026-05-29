@@ -6,7 +6,7 @@
 
 <div align="center">
 
-[![CI](https://github.com/MadewellRD/RRDA-Rapid-Research-Discovery-Analysis/actions/workflows/ci.yml/badge.svg)](https://github.com/MadewellRD/RRDA-Rapid-Research-Discovery-Analysis/actions/workflows/ci.yml)
+[![CI](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/MadewellRD/RRDA-Rapid-Research-Discovery-Analysis/main/.github/ci-status.json)](https://github.com/MadewellRD/RRDA-Rapid-Research-Discovery-Analysis)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![Node](https://img.shields.io/badge/node-20%2B-brightgreen.svg)](https://nodejs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178c6.svg)](https://www.typescriptlang.org)
