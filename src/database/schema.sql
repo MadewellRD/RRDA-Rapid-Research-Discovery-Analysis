@@ -195,7 +195,23 @@ ON CONFLICT (name) DO NOTHING;
 INSERT INTO metrics (date) VALUES (CURRENT_DATE)
 ON CONFLICT (date) DO NOTHING;
 
+-- Manual scan jobs (replaces in-memory array)
+CREATE TABLE IF NOT EXISTS scan_jobs (
+  id VARCHAR(100) PRIMARY KEY,
+  source VARCHAR(50) NOT NULL,
+  status VARCHAR(20) NOT NULL DEFAULT 'queued',
+  started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  completed_at TIMESTAMPTZ,
+  discovered_count INT,
+  stored_count INT,
+  error TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_scan_jobs_status ON scan_jobs(status);
+CREATE INDEX IF NOT EXISTS idx_scan_jobs_started ON scan_jobs(started_at DESC);
+
 -- Innovation proposals synthesized from recent signals
+-- Requires: CREATE EXTENSION IF NOT EXISTS vector;
 CREATE TABLE IF NOT EXISTS innovation_proposals (
   id SERIAL PRIMARY KEY,
   name VARCHAR(100) NOT NULL,
@@ -207,8 +223,15 @@ CREATE TABLE IF NOT EXISTS innovation_proposals (
   novelty_score INTEGER DEFAULT 5,
   reasoning TEXT,
   status VARCHAR(20) DEFAULT 'proposed',
-  created_at TIMESTAMPTZ DEFAULT NOW()
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  -- pgvector embedding of "name: concept" for cosine similarity duplicate detection
+  -- dimension matches text-embedding-3-small (1536). Add after enabling pgvector:
+  --   ALTER TABLE innovation_proposals ADD COLUMN IF NOT EXISTS concept_embedding vector(1536);
+  concept_embedding vector(1536)
 );
 
 CREATE INDEX IF NOT EXISTS idx_innovation_proposals_status ON innovation_proposals(status);
 CREATE INDEX IF NOT EXISTS idx_innovation_proposals_created ON innovation_proposals(created_at DESC);
+-- Enable after running: CREATE EXTENSION IF NOT EXISTS vector;
+-- CREATE INDEX IF NOT EXISTS idx_innovation_proposals_embedding
+--   ON innovation_proposals USING ivfflat (concept_embedding vector_cosine_ops) WITH (lists = 100);

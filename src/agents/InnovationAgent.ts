@@ -292,21 +292,63 @@ If you cannot identify a genuinely novel concept from the data, return: {"skip":
     };
   }
 
+  // ─── Embeddings ───────────────────────────────────────────────
+
+  /**
+   * Generate an embedding vector for a proposal's identity string.
+   * Falls back to null if the OpenAI embeddings API isn't available (e.g. bitnet mode).
+   */
+  private async embedText(text: string): Promise<number[] | null> {
+    try {
+      const response = await this.llm.embeddings.create({
+        model: 'text-embedding-3-small',
+        input: text,
+      });
+      return response.data[0].embedding;
+    } catch {
+      return null;
+    }
+  }
+
   // ─── Novelty Check ────────────────────────────────────────────
 
+  /**
+   * Cosine similarity duplicate check via pgvector.
+   * Falls back to a lightweight LLM check when no embedding is available
+   * (e.g. local bitnet inference with no OpenAI key).
+   *
+   * Threshold: cosine distance < 0.15 (≈ >0.85 similarity) → duplicate.
+   */
   private async checkDuplicate(proposal: ProjectProposal): Promise<boolean> {
     const pool = getPool();
-    const result = await pool.query(
-      `SELECT id, name, concept FROM innovation_proposals 
-       WHERE created_at > NOW() - INTERVAL '7 days'
-       ORDER BY created_at DESC LIMIT 20`,
-    );
+    const identity = `${proposal.name}: ${proposal.concept}`;
+    const embedding = await this.embedText(identity);
 
+    if (embedding) {
+      // Fast vector search — O(log n), no token cost
+      const result = await pool.query(
+        `SELECT id, name, concept,
+                1 - (concept_embedding <=> $1::vector) AS similarity
+         FROM innovation_proposals
+         WHERE concept_embedding IS NOT NULL
+         ORDER BY concept_embedding <=> $1::vector
+         LIMIT 1`,
+        [`[${embedding.join(',')}]`]
+      );
+      if (result.rows.length > 0 && result.rows[0].similarity > 0.85) {
+        console.log(`[NOVELTY] Vector similarity ${result.rows[0].similarity.toFixed(3)} with "${result.rows[0].name}"`);
+        return true;
+      }
+      return false;
+    }
+
+    // Fallback: small LLM check against last 10 proposals only (no context blowout)
+    const result = await pool.query(
+      `SELECT name, concept FROM innovation_proposals ORDER BY created_at DESC LIMIT 10`
+    );
     if (result.rows.length === 0) return false;
 
-    // Use LLM to check semantic similarity
     const existing = result.rows.map((r: any) => `${r.name}: ${r.concept}`).join('\n');
-    
     const response = await this.llm.chat.completions.create({
       model: this.model,
       temperature: 0,
@@ -315,10 +357,9 @@ If you cannot identify a genuinely novel concept from the data, return: {"skip":
         content: 'You check if a new product proposal is too similar to existing ones. Return ONLY "duplicate" or "novel".'
       }, {
         role: 'user',
-        content: `NEW PROPOSAL: ${proposal.name}: ${proposal.concept}\n\nEXISTING:\n${existing}\n\nIs the new proposal substantially different from all existing ones?`
+        content: `NEW PROPOSAL: ${identity}\n\nEXISTING:\n${existing}\n\nIs the new proposal substantially different from all existing ones?`
       }],
     });
-
     return (response.choices[0].message.content || '').toLowerCase().includes('duplicate');
   }
 
@@ -326,11 +367,13 @@ If you cannot identify a genuinely novel concept from the data, return: {"skip":
 
   private async storeProposal(proposal: ProjectProposal): Promise<number> {
     const pool = getPool();
+    const embedding = await this.embedText(`${proposal.name}: ${proposal.concept}`);
+
     const result = await pool.query(
-      `INSERT INTO innovation_proposals 
-         (name, concept, problem_statement, inspiration_sources, target_users, 
-          capabilities, novelty_score, reasoning, status)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      `INSERT INTO innovation_proposals
+         (name, concept, problem_statement, inspiration_sources, target_users,
+          capabilities, novelty_score, reasoning, status, concept_embedding)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
        RETURNING id`,
       [
         proposal.name,
@@ -342,6 +385,7 @@ If you cannot identify a genuinely novel concept from the data, return: {"skip":
         proposal.noveltyScore,
         proposal.reasoning,
         proposal.status,
+        embedding ? `[${embedding.join(',')}]` : null,
       ]
     );
     return result.rows[0].id;

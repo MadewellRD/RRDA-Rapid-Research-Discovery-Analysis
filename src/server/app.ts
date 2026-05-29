@@ -24,7 +24,7 @@ interface ScanJob {
   error?: string;
 }
 
-const scanJobs: ScanJob[] = [];
+// scanJobs are persisted in Postgres (scan_jobs table) — no in-memory state.
 
 function toInt(value: string | undefined, fallback: number): number {
   const parsed = Number.parseInt(value || '', 10);
@@ -50,13 +50,10 @@ async function getHealth() {
 }
 
 async function runScan(source: SourceKey, jobId: string): Promise<void> {
-  const job = scanJobs.find((entry) => entry.id === jobId);
-  if (!job) return;
-
-  job.status = 'running';
+  const pool = getPool();
+  await pool.query(`UPDATE scan_jobs SET status = 'running' WHERE id = $1`, [jobId]);
 
   const core = new RDACore();
-  const pool = getPool();
   let discoveries: Discovery[] = [];
 
   try {
@@ -96,10 +93,13 @@ async function runScan(source: SourceKey, jobId: string): Promise<void> {
       }
     }
 
-    job.status = 'completed';
-    job.discoveredCount = discoveries.length;
-    job.storedCount = storedCount;
-    job.completedAt = new Date().toISOString();
+    await pool.query(
+      `UPDATE scan_jobs
+       SET status = 'completed', completed_at = NOW(),
+           discovered_count = $2, stored_count = $3
+       WHERE id = $1`,
+      [jobId, discoveries.length, storedCount]
+    );
 
     await pool.query(
       `INSERT INTO sources (name, category, scan_frequency, last_scan, total_discoveries)
@@ -110,16 +110,17 @@ async function runScan(source: SourceKey, jobId: string): Promise<void> {
       [source, 'public', 'manual', storedCount]
     );
   } catch (error) {
-    job.status = 'failed';
-    job.error = error instanceof Error ? error.message : 'Unknown scan error';
-    job.completedAt = new Date().toISOString();
+    await pool.query(
+      `UPDATE scan_jobs SET status = 'failed', completed_at = NOW(), error = $2 WHERE id = $1`,
+      [jobId, error instanceof Error ? error.message : 'Unknown scan error']
+    );
   }
 }
 
 export function createApp() {
   const app = express();
 
-  app.use(cors({ origin: process.env.CORS_ORIGIN || true }));
+  app.use(cors({ origin: process.env.CORS_ORIGIN || 'http://localhost:4173' }));
   app.use(express.json());
 
   app.get('/', (_req: Request, res: Response) => {
@@ -159,7 +160,7 @@ export function createApp() {
       deepAnalyses: deepAnalyses.rows[0]?.count || 0,
       proposals: proposals.rows[0]?.count || 0,
       lastDiscoveryAt: lastDiscovery.rows[0]?.last_discovery_at || null,
-      activeJobs: scanJobs.filter((job) => job.status === 'queued' || job.status === 'running').length,
+      activeJobs: (await pool.query(`SELECT COUNT(*)::int AS count FROM scan_jobs WHERE status IN ('queued','running')`)).rows[0]?.count || 0,
     });
   });
 
@@ -267,8 +268,31 @@ export function createApp() {
     res.json(result.rows);
   });
 
-  app.get('/api/v1/jobs', (_req: Request, res: Response) => {
-    res.json(scanJobs.slice().reverse().slice(0, 20));
+  app.get('/api/v1/jobs', async (_req: Request, res: Response) => {
+    const pool = getPool();
+    const result = await pool.query(
+      `SELECT id, source, status, started_at AS "startedAt", completed_at AS "completedAt",
+              discovered_count AS "discoveredCount", stored_count AS "storedCount", error
+       FROM scan_jobs
+       ORDER BY started_at DESC
+       LIMIT 20`
+    );
+    res.json(result.rows);
+  });
+
+  // ─── Admin auth middleware ────────────────────────────────────────
+  app.use('/api/v1/admin', (req: Request, res: Response, next) => {
+    const apiKey = process.env.API_KEY;
+    if (!apiKey) {
+      res.status(503).json({ error: 'Admin endpoints disabled: API_KEY env var not configured' });
+      return;
+    }
+    const provided = req.headers['x-api-key'] ?? req.headers['authorization']?.replace(/^Bearer\s+/i, '');
+    if (provided !== apiKey) {
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
+    next();
   });
 
   app.post('/api/v1/admin/scans', async (req: Request, res: Response) => {
@@ -278,13 +302,12 @@ export function createApp() {
       return;
     }
 
+    const pool = getPool();
     const jobId = `${source}-${Date.now()}`;
-    scanJobs.push({
-      id: jobId,
-      source,
-      status: 'queued',
-      startedAt: new Date().toISOString(),
-    });
+    await pool.query(
+      `INSERT INTO scan_jobs (id, source, status, started_at) VALUES ($1, $2, 'queued', NOW())`,
+      [jobId, source]
+    );
 
     void runScan(source, jobId);
 
