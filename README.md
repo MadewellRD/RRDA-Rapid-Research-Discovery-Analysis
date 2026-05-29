@@ -1,6 +1,6 @@
 ﻿<div align="center">
 
-![](.github/rrda-banner.png)
+![](.github/rrda-banner-2.png)
 
 </div>
 
