@@ -224,9 +224,6 @@ CREATE TABLE IF NOT EXISTS innovation_proposals (
   reasoning TEXT,
   status VARCHAR(20) DEFAULT 'proposed',
   created_at TIMESTAMPTZ DEFAULT NOW(),
-  -- pgvector embedding of "name: concept" for cosine similarity duplicate detection
-  -- dimension matches text-embedding-3-small (1536). Add after enabling pgvector:
-  --   ALTER TABLE innovation_proposals ADD COLUMN IF NOT EXISTS concept_embedding vector(1536);
   concept_embedding vector(1536)
 );
 
@@ -235,3 +232,42 @@ CREATE INDEX IF NOT EXISTS idx_innovation_proposals_created ON innovation_propos
 -- Enable after running: CREATE EXTENSION IF NOT EXISTS vector;
 -- CREATE INDEX IF NOT EXISTS idx_innovation_proposals_embedding
 --   ON innovation_proposals USING ivfflat (concept_embedding vector_cosine_ops) WITH (lists = 100);
+
+-- ─── Runtime configuration (DB-backed, editable via dashboard) ────────────────
+CREATE TABLE IF NOT EXISTS config (
+  key VARCHAR(100) PRIMARY KEY,
+  value TEXT NOT NULL DEFAULT '',
+  secret BOOLEAN NOT NULL DEFAULT FALSE,
+  description TEXT,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+INSERT INTO config (key, value, secret, description) VALUES
+('LLM_PROVIDER',              'openai',                false, 'LLM provider: openai or bitnet'),
+('LLM_DEFAULT_MODEL',         'gpt-4o-mini',           false, 'Model used for scoring and clustering'),
+('LLM_CREATIVE_MODEL',        'gpt-4o',                false, 'Model used for creative synthesis'),
+('BITNET_BASE_URL',           'http://localhost:8080/v1', false, 'Local bitnet-compatible inference URL'),
+('OPENAI_API_KEY',            '',                      true,  'OpenAI API key'),
+('ENABLE_SCHEDULER',          'true',                  false, 'Enable background scan scheduler'),
+('ENABLE_AUTO_ANALYSIS',      'true',                  false, 'Automatically deep-analyse high-value discoveries'),
+('INNOVATION_CYCLE_MINUTES',  '20',                    false, 'How often the innovation agent runs (minutes)'),
+('SCAN_GITHUB',               'true',                  false, 'Enable GitHub scanner'),
+('SCAN_HACKERNEWS',           'true',                  false, 'Enable HackerNews scanner'),
+('SCAN_REDDIT',               'true',                  false, 'Enable Reddit scanner'),
+('SCAN_ARXIV',                'true',                  false, 'Enable ArXiv scanner'),
+('GITHUB_SCAN_FREQUENCY',     '15min',                 false, 'GitHub scan interval'),
+('HACKERNEWS_SCAN_FREQUENCY', '1hour',                 false, 'HackerNews scan interval'),
+('REDDIT_SCAN_FREQUENCY',     '6hours',                false, 'Reddit scan interval'),
+('ARXIV_SCAN_FREQUENCY',      '24hours',               false, 'ArXiv scan interval'),
+('SLACK_WEBHOOK_URL',         '',                      true,  'Slack incoming webhook URL'),
+('ALERT_EMAIL',               '',                      false, 'Recipient email for critical alerts'),
+('SMTP_HOST',                 '',                      false, 'SMTP server hostname'),
+('SMTP_PORT',                 '587',                   false, 'SMTP server port'),
+('SMTP_USER',                 '',                      false, 'SMTP authentication username'),
+('SMTP_PASSWORD',             '',                      true,  'SMTP authentication password'),
+('GITHUB_TOKEN_1',            '',                      true,  'Primary GitHub API token'),
+('GITHUB_TOKEN_2',            '',                      true,  'Secondary GitHub API token (optional)'),
+('CORS_ORIGIN',               'http://localhost:4173', false, 'Allowed CORS origin for the dashboard'),
+('MAX_CLONE_SIZE_MB',         '500',                   false, 'Max repo clone size for deep analysis (MB)'),
+('CLONE_RETENTION_HOURS',     '4',                     false, 'How long clones are kept on disk (hours)')
+ON CONFLICT (key) DO NOTHING;

@@ -13,17 +13,6 @@ dotenv.config();
 
 type SourceKey = 'github' | 'hackernews' | 'reddit' | 'arxiv';
 
-interface ScanJob {
-  id: string;
-  source: SourceKey;
-  status: 'queued' | 'running' | 'completed' | 'failed';
-  startedAt: string;
-  completedAt?: string;
-  discoveredCount?: number;
-  storedCount?: number;
-  error?: string;
-}
-
 // scanJobs are persisted in Postgres (scan_jobs table) — no in-memory state.
 
 function toInt(value: string | undefined, fallback: number): number {
@@ -316,6 +305,62 @@ export function createApp() {
       status: 'queued',
       source,
     });
+  });
+
+  // ─── Config endpoints ─────────────────────────────────────────────
+
+  /**
+   * GET /api/v1/admin/config
+   * Returns all config rows. Secret values are masked unless ?reveal=1 is passed
+   * (useful for copying to a new environment — still requires auth).
+   */
+  app.get('/api/v1/admin/config', async (req: Request, res: Response) => {
+    const pool = getPool();
+    const reveal = req.query.reveal === '1';
+    const result = await pool.query(
+      `SELECT key, value, secret, description, updated_at FROM config ORDER BY key`
+    );
+    const rows = result.rows.map((r) => ({
+      key: r.key,
+      value: r.secret && !reveal ? (r.value ? '••••••••' : '') : r.value,
+      secret: r.secret,
+      description: r.description,
+      updatedAt: r.updated_at,
+    }));
+    res.json(rows);
+  });
+
+  /**
+   * PATCH /api/v1/admin/config
+   * Body: { "KEY": "value", ... }
+   * Values equal to '••••••••' are skipped (unchanged masked secret).
+   */
+  app.patch('/api/v1/admin/config', async (req: Request, res: Response) => {
+    const pool = getPool();
+    const updates = req.body as Record<string, string>;
+    if (!updates || typeof updates !== 'object') {
+      res.status(400).json({ error: 'Body must be a flat key/value object' });
+      return;
+    }
+
+    const skipped: string[] = [];
+    const updated: string[] = [];
+
+    for (const [key, value] of Object.entries(updates)) {
+      if (value === '••••••••') {
+        skipped.push(key);
+        continue;
+      }
+      const result = await pool.query(
+        `UPDATE config SET value = $2, updated_at = NOW() WHERE key = $1 RETURNING key`,
+        [key, value]
+      );
+      if (result.rowCount && result.rowCount > 0) {
+        updated.push(key);
+      }
+    }
+
+    res.json({ ok: true, updated, skipped });
   });
 
   return app;
