@@ -96,10 +96,10 @@ RRDA runs three concurrent loops:
                           │
               ┌───────────┴──────────┐
               │                      │
-         REST API (4000)      React Dashboard (4173)
-         Express + PG          Vite + React SPA
-                                6-view sidebar nav
-                                DB-backed config UI
+         REST API (4000)   React Dashboard (4173)
+         Express + PG        Vite + React SPA
+                            6-view sidebar nav
+                            DB-backed config UI
 ```
 
 **Key design decisions:**
