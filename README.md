@@ -61,38 +61,38 @@ RRDA runs three concurrent loops:
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                    InnovationScheduler                   │
-│                                                         │
+┌────────────────────────────────────────────────────────┐
+│                    InnovationScheduler                 │
+│                                                        │
 │  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌────────┐  │
 │  │  GitHub  │  │    HN    │  │  Reddit  │  │ ArXiv  │  │
-│  │ 15 min   │  │  1 hr    │  │  6 hr    │  │ daily  │  │
+│  │  15 min  │  │   1 hr   │  │   6 hr   │  │ daily  │  │
 │  └────┬─────┘  └────┬─────┘  └────┬─────┘  └───┬────┘  │
-│       │             │              │              │       │
-│       └─────────────┴──────────────┴──────────────┘       │
-│                         │                                │
-│              Domain keyword filter                       │
-│                         │                                │
-│                    RDACore.assess()                      │
-│             (threat score · opportunity score            │
-│              intelligence level classification)          │
-│                         │                                │
-│              ┌──────────┴──────────┐                    │
-│              │                     │                    │
-│    discoveries table        DeepAnalysisPipeline        │
-│                             (clone → LOC → arch → AI)   │
-│                                    │                    │
-│                         deep_analyses table             │
-│                                                         │
-│  ┌──────────────────────────────────────────────┐       │
-│  │  InnovationAgent  (every 20 min)             │       │
-│  │  1. Pull HIGH/CRITICAL discoveries           │       │
-│  │  2. Cluster by theme (cheap model)           │       │
-│  │  3. Synthesize novel proposal (high-temp)    │       │
-│  │  4. Deduplicate via pgvector cosine sim      │       │
-│  │  5. Store → Slack/email alert                │       │
-│  └──────────────────────────────────────────────┘       │
-└─────────────────────────────────────────────────────────┘
+│       │             │             │            │       │
+│       └─────────────┴─────────────┴────────────┘       │
+│                         │                              │
+│              Domain keyword filter                     │
+│                         │                              │
+│                  RDACore.assess()                      │
+│          (threat score · opportunity score             │
+│          intelligence level classification)            │
+│                         │                              │
+│              ┌──────────┴──────────┐                   │
+│              │                     │                   │
+│    discoveries table     DeepAnalysisPipeline          │
+│                       (clone → LOC → arch → AI)        │
+│                                    │                   │
+│                          deep_analyses table           │
+│                                                        │
+│  ┌──────────────────────────────────────────────┐      │
+│  │  InnovationAgent  (every 20 min)             │      │
+│  │  1. Pull HIGH/CRITICAL discoveries           │      │
+│  │  2. Cluster by theme (cheap model)           │      │
+│  │  3. Synthesize novel proposal (high-temp)    │      │
+│  │  4. Deduplicate via pgvector cosine sim      │      │
+│  │  5. Store → Slack/email alert                │      │
+│  └──────────────────────────────────────────────┘      │
+└────────────────────────────────────────────────────────┘
                           │
               ┌───────────┴──────────┐
               │                      │
