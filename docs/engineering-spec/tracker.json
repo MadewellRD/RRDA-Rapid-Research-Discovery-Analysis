@@ -783,7 +783,7 @@
       "id": "GL-47",
       "title": "Register self-hosted GitHub Actions runner on dev box, repoint CI to it",
       "sprint": 1,
-      "status": "pending",
+      "status": "done",
       "severity": "SHIP",
       "gaps": [],
       "branch": "gl/gl-47-self-hosted-runner",
