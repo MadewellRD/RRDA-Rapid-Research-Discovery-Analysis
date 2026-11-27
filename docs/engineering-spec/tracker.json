@@ -1,0 +1,546 @@
+{
+  "project": "RRDA",
+  "tracker": "RRDA-golive-tracker",
+  "repo": "https://github.com/MadewellRD/RRDA-Rapid-Research-Discovery-Analysis",
+  "branch": "main",
+  "head_at_spec": "a680687",
+  "spec_date": "2026-11-26",
+  "sprints": 8,
+  "timeline": "3-4 days continuous",
+  "spec_dir": "docs/engineering-spec",
+  "phase3_gate": "pending",
+  "phase3_audit_results": "docs/engineering-spec/audit-results.md",
+  "tasks": [
+    {
+      "id": "GL-01",
+      "title": "Push local main to origin",
+      "sprint": 1,
+      "status": "pending",
+      "severity": "SHIP",
+      "gaps": [],
+      "branch": "none (direct push)",
+      "acceptance": [
+        "git push origin main succeeds with no conflicts",
+        "GitHub Actions CI run triggers and completes",
+        "Local HEAD matches origin/main"
+      ],
+      "depends_on": [],
+      "blocked_on": null
+    },
+    {
+      "id": "GL-02",
+      "title": "Install test framework and add baseline test suite",
+      "sprint": 1,
+      "status": "pending",
+      "severity": "SHIP",
+      "gaps": [1],
+      "branch": "gl/gl-02-test-framework",
+      "acceptance": [
+        "vitest added as devDependency",
+        "package.json has test script",
+        "Minimum 1 test file per module: pool.ts, RDACore.ts, llm/client.ts",
+        "npm test exits 0",
+        "CI ci.yml backend job runs npm test as explicit step",
+        "Coverage threshold set at 60%"
+      ],
+      "depends_on": ["GL-01"],
+      "blocked_on": null
+    },
+    {
+      "id": "GL-03",
+      "title": "Add ESLint and Prettier",
+      "sprint": 1,
+      "status": "pending",
+      "severity": "HIGH",
+      "gaps": [2],
+      "branch": "gl/gl-03-lint",
+      "acceptance": [
+        "eslint + @typescript-eslint/eslint-plugin + prettier added as devDependencies",
+        ".eslintrc.json and .prettierrc present at repo root",
+        "package.json has lint and format scripts",
+        "npm run lint exits 0",
+        "CI ci.yml runs npm run lint"
+      ],
+      "depends_on": ["GL-01"],
+      "blocked_on": null
+    },
+    {
+      "id": "GL-04",
+      "title": "Document npm_registry scanner gap",
+      "sprint": 7,
+      "status": "pending",
+      "severity": "MED",
+      "gaps": [3],
+      "branch": "gl/gl-04-npm-registry-doc",
+      "acceptance": [
+        "schema.sql npm_registry config row has comment: scanner not yet implemented",
+        "README lists only implemented sources: GitHub, HN, Reddit, ArXiv",
+        "GitHub issue opened tracking npm_registry scanner as future feature"
+      ],
+      "depends_on": ["GL-01"],
+      "blocked_on": null
+    },
+    {
+      "id": "GL-05",
+      "title": "Automate pgvector setup",
+      "sprint": 2,
+      "status": "pending",
+      "severity": "SHIP",
+      "gaps": [4, 12],
+      "branch": "gl/gl-05-pgvector",
+      "acceptance": [
+        "schema.sql includes CREATE EXTENSION IF NOT EXISTS vector as first DDL statement",
+        "innovation_proposals vector index uncommented and active",
+        "docker-compose.yml uses ankane/pgvector image",
+        "README documents pgvector requirement and Docker image change",
+        "npm run seed-demo completes without error"
+      ],
+      "depends_on": ["GL-01"],
+      "blocked_on": null
+    },
+    {
+      "id": "GL-06",
+      "title": "Fix docker-compose startup race",
+      "sprint": 2,
+      "status": "pending",
+      "severity": "SHIP",
+      "gaps": [5],
+      "branch": "gl/gl-06-compose-health",
+      "acceptance": [
+        "api service depends_on postgres with condition: service_healthy",
+        "postgres service has healthcheck block with pg_isready",
+        "docker-compose up on cold start produces no connection refused errors"
+      ],
+      "depends_on": ["GL-05"],
+      "blocked_on": null
+    },
+    {
+      "id": "GL-07",
+      "title": "Reconcile docker-compose LLM_PROVIDER and CORS_ORIGIN",
+      "sprint": 2,
+      "status": "pending",
+      "severity": "HIGH",
+      "gaps": [6, 15],
+      "branch": "gl/gl-07-compose-env",
+      "acceptance": [
+        "docker-compose.yml removes hardcoded LLM_PROVIDER=bitnet override",
+        "docker-compose.yml uses compose variable for CORS_ORIGIN",
+        ".env.example and docker-compose are consistent on defaults"
+      ],
+      "depends_on": ["GL-01"],
+      "blocked_on": null
+    },
+    {
+      "id": "GL-08",
+      "title": "GitHub scanner graceful degradation",
+      "sprint": 4,
+      "status": "pending",
+      "severity": "HIGH",
+      "gaps": [7],
+      "branch": "gl/gl-08-github-graceful",
+      "acceptance": [
+        "GitHubScanner logs warning and returns [] when no tokens configured",
+        "Scheduler does not crash when GitHub scanner returns empty",
+        "Warning message directs user to configure GITHUB_TOKEN_1"
+      ],
+      "depends_on": ["GL-02"],
+      "blocked_on": null
+    },
+    {
+      "id": "GL-09",
+      "title": "Reddit scanner resilience",
+      "sprint": 7,
+      "status": "pending",
+      "severity": "HIGH",
+      "gaps": [8],
+      "branch": "gl/gl-09-reddit-resilience",
+      "acceptance": [
+        "RedditScanner has explicit 429 handling with exponential backoff (max 3 retries)",
+        "On non-recoverable failure, scanner logs and returns []",
+        "Unit test verifies graceful handling of a 429 response (mock fetch)"
+      ],
+      "depends_on": ["GL-02"],
+      "blocked_on": null
+    },
+    {
+      "id": "GL-10",
+      "title": "ArXiv HTTPS and proper XML parsing",
+      "sprint": 7,
+      "status": "pending",
+      "severity": "HIGH",
+      "gaps": [9, 10],
+      "branch": "gl/gl-10-arxiv",
+      "acceptance": [
+        "ArxivScanner uses https://export.arxiv.org/api/query",
+        "XML parsing replaced with fast-xml-parser or xml2js",
+        "Regex parsing removed",
+        "Unit test parses a sample ArXiv response fixture"
+      ],
+      "depends_on": ["GL-02"],
+      "blocked_on": null
+    },
+    {
+      "id": "GL-11",
+      "title": "Add rate limiting to admin endpoints",
+      "sprint": 4,
+      "status": "pending",
+      "severity": "HIGH",
+      "gaps": [11],
+      "branch": "gl/gl-11-rate-limit",
+      "acceptance": [
+        "express-rate-limit added as dependency",
+        "Admin routes have limiter: max 20 req/min per IP",
+        "Non-admin routes have limiter: max 100 req/min per IP",
+        "RateLimit-* headers present in responses",
+        "429 response returned when limit exceeded"
+      ],
+      "depends_on": ["GL-02"],
+      "blocked_on": null
+    },
+    {
+      "id": "GL-12",
+      "title": "Add DB migration tooling",
+      "sprint": 2,
+      "status": "pending",
+      "severity": "HIGH",
+      "gaps": [13],
+      "branch": "gl/gl-12-migrations",
+      "acceptance": [
+        "node-pg-migrate added as devDependency",
+        "Initial migration file created from current schema.sql",
+        "package.json has db:migrate script",
+        "README documents migration workflow",
+        "Migration files are the authority; schema.sql is reference"
+      ],
+      "depends_on": ["GL-05"],
+      "blocked_on": null
+    },
+    {
+      "id": "GL-13",
+      "title": "Remove duplicated InnovationAgent DDL",
+      "sprint": 2,
+      "status": "pending",
+      "severity": "MED",
+      "gaps": [14],
+      "branch": "gl/gl-13-ddl-dedup",
+      "acceptance": [
+        "src/scheduler/index.ts does not contain inline CREATE TABLE IF NOT EXISTS innovation_proposals DDL",
+        "Schema managed in migration files only",
+        "npm run build succeeds"
+      ],
+      "depends_on": ["GL-12"],
+      "blocked_on": null
+    },
+    {
+      "id": "GL-14",
+      "title": "Harden Dockerfile",
+      "sprint": 3,
+      "status": "pending",
+      "severity": "SHIP",
+      "gaps": [16, 17, 18],
+      "branch": "gl/gl-14-dockerfile",
+      "acceptance": [
+        "Multi-stage build: builder stage compiles; runtime stage copies dist/ and prod node_modules only",
+        "Runtime stage includes USER node directive",
+        "Dockerfile starts both API and scheduler (process supervisor or separate CMD override documented)",
+        "docker build . completes successfully",
+        "docker-compose up with new image starts without error"
+      ],
+      "depends_on": ["GL-06"],
+      "blocked_on": null
+    },
+    {
+      "id": "GL-15",
+      "title": "Fix RepoCloner path, event loop blocking, and cross-platform du",
+      "sprint": 3,
+      "status": "pending",
+      "severity": "SHIP",
+      "gaps": [19, 20, 21],
+      "branch": "gl/gl-15-repocloner",
+      "acceptance": [
+        "RepoCloner default CLONES_DIRECTORY is ./clones",
+        "execSync replaced with async child_process.exec via promisify",
+        "getDirSizeMB uses cross-platform approach (recursive stat sum)",
+        "run-deep-analysis.ts runs successfully against a known small public repo"
+      ],
+      "depends_on": ["GL-01"],
+      "blocked_on": null
+    },
+    {
+      "id": "GL-16",
+      "title": "Fix EmailNotifier security and env",
+      "sprint": 4,
+      "status": "pending",
+      "severity": "HIGH",
+      "gaps": [22, 23],
+      "branch": "gl/gl-16-email-notifier",
+      "acceptance": [
+        "EMAIL_FROM_NAME added to .env.example",
+        "EmailNotifier reads secure from SMTP_SECURE env var",
+        "When SMTP_SECURE=false and port 587, requireTLS: true is set",
+        "README documents SMTP configuration"
+      ],
+      "depends_on": ["GL-01"],
+      "blocked_on": null
+    },
+    {
+      "id": "GL-17",
+      "title": "Fix README config key count",
+      "sprint": 7,
+      "status": "pending",
+      "severity": "LOW",
+      "gaps": [24],
+      "branch": "gl/gl-17-readme-count",
+      "acceptance": [
+        "README updated to 28 config keys (or accurate current count)",
+        "README and schema.sql seed count match"
+      ],
+      "depends_on": ["GL-01"],
+      "blocked_on": null
+    },
+    {
+      "id": "GL-18",
+      "title": "Resolve Discovery interface camelCase/snake_case inconsistency",
+      "sprint": 5,
+      "status": "pending",
+      "severity": "HIGH",
+      "gaps": [25],
+      "branch": "gl/gl-18-discovery-type",
+      "acceptance": [
+        "Discovery interface uses single consistent naming (snake_case to match DB)",
+        "All references to discoveredAt updated to discovered_at throughout codebase",
+        "npm run build exits 0",
+        "npm test exits 0"
+      ],
+      "depends_on": ["GL-02"],
+      "blocked_on": null
+    },
+    {
+      "id": "GL-19",
+      "title": "Update SlackNotifier to Block Kit",
+      "sprint": 4,
+      "status": "pending",
+      "severity": "HIGH",
+      "gaps": [26],
+      "branch": "gl/gl-19-slack-block-kit",
+      "acceptance": [
+        "SlackNotifier sends blocks array instead of attachments",
+        "Color-coded severity communicated via block context",
+        "npm run test-alerts completes without Slack API deprecation warnings",
+        "CRITICAL alert, HIGH alert, daily digest functionality preserved"
+      ],
+      "depends_on": ["GL-01"],
+      "blocked_on": null
+    },
+    {
+      "id": "GL-20",
+      "title": "CompetitiveReport model selection",
+      "sprint": 7,
+      "status": "pending",
+      "severity": "LOW",
+      "gaps": [27],
+      "branch": "gl/gl-20-report-model",
+      "acceptance": [
+        "CompetitiveReport.ts uses getCreativeModel() instead of getDefaultModel()",
+        "Rationale comment added in code"
+      ],
+      "depends_on": ["GL-01"],
+      "blocked_on": null
+    },
+    {
+      "id": "GL-21",
+      "title": "Type AlertOrchestrator assessment parameter",
+      "sprint": 5,
+      "status": "pending",
+      "severity": "MED",
+      "gaps": [28],
+      "branch": "gl/gl-21-assessment-type",
+      "acceptance": [
+        "Assessment interface defined in src/types/index.ts with level, summary, reasoning",
+        "AlertOrchestrator.processDiscovery typed as Assessment instead of any",
+        "RDACore.ts and all callers updated",
+        "npm run build exits 0"
+      ],
+      "depends_on": ["GL-18"],
+      "blocked_on": null
+    },
+    {
+      "id": "GL-22",
+      "title": "Fix ReportGenerator logic",
+      "sprint": 5,
+      "status": "pending",
+      "severity": "HIGH",
+      "gaps": [29, 30],
+      "branch": "gl/gl-22-report-generator",
+      "acceptance": [
+        "calculateCostSavings() removed or returns 0 with warning log",
+        "getCriticalDiscoveries() filter matches actual post-assessment status values",
+        "identifyTrends() adds LIMIT 1000 to prevent unbounded memory",
+        "Weekly report generation tested against seed data"
+      ],
+      "depends_on": ["GL-21"],
+      "blocked_on": null
+    },
+    {
+      "id": "GL-23",
+      "title": "Fix deploy.sh build step",
+      "sprint": 3,
+      "status": "pending",
+      "severity": "SHIP",
+      "gaps": [31],
+      "branch": "gl/gl-23-deploy-sh",
+      "acceptance": [
+        "deploy.sh runs npm ci (all deps) before npm run build",
+        "deploy.sh runs npm prune --production after build",
+        "Rollback verifies both rrda and rrda-dashboard systemd services",
+        "Install/build/prune sequence verified by manual trace"
+      ],
+      "depends_on": ["GL-14"],
+      "blocked_on": null
+    },
+    {
+      "id": "GL-24",
+      "title": "Confirm and fix Tabler Icons loading",
+      "sprint": 6,
+      "status": "pending",
+      "severity": "SHIP",
+      "gaps": [32],
+      "branch": "gl/gl-24-tabler-icons",
+      "acceptance": [
+        "Verify styles.css for Tabler Icons CDN import",
+        "If missing: add CDN link to dashboard/index.html OR install @tabler/icons-react as package",
+        "Dashboard renders icon glyphs correctly in browser (no missing icon squares)"
+      ],
+      "depends_on": ["GL-01"],
+      "blocked_on": null
+    },
+    {
+      "id": "GL-25",
+      "title": "Fix tsconfig moduleResolution",
+      "sprint": 6,
+      "status": "pending",
+      "severity": "HIGH",
+      "gaps": [33],
+      "branch": "gl/gl-25-tsconfig",
+      "acceptance": [
+        "tsconfig.json moduleResolution changed from node to node16",
+        "npm run build exits 0",
+        "No new import path errors introduced"
+      ],
+      "depends_on": ["GL-02"],
+      "blocked_on": null
+    },
+    {
+      "id": "GL-26",
+      "title": "Replace fake CI badge with real Shields.io endpoint",
+      "sprint": 1,
+      "status": "pending",
+      "severity": "SHIP",
+      "gaps": [34],
+      "branch": "gl/gl-26-ci-badge",
+      "acceptance": [
+        "ci-status.json generated from actual CI run result OR replaced with native GitHub Actions badge",
+        "README CI badge reflects real pipeline status",
+        "Static hardcoded passing file removed or overwritten by CI"
+      ],
+      "depends_on": ["GL-01", "GL-02"],
+      "blocked_on": null
+    },
+    {
+      "id": "GL-27",
+      "title": "Fix seed-demo source_id bug",
+      "sprint": 5,
+      "status": "pending",
+      "severity": "MED",
+      "gaps": [35],
+      "branch": "gl/gl-27-seed-demo",
+      "acceptance": [
+        "seed-demo.ts passes proper unique source ID string as $2",
+        "npm run seed-demo inserts 3 clean rows without constraint violations",
+        "Seeded data visible in dashboard discoveries view"
+      ],
+      "depends_on": ["GL-05"],
+      "blocked_on": null
+    },
+    {
+      "id": "GL-28",
+      "title": "Fix vite.config cacheDir and add proxy",
+      "sprint": 6,
+      "status": "pending",
+      "severity": "MED",
+      "gaps": [36, 37],
+      "branch": "gl/gl-28-vite-config",
+      "acceptance": [
+        "vite.config.ts removes /tmp/rrda-vite-cache hardcoded cacheDir",
+        "vite.config.ts adds server.proxy routing /api to http://localhost:4000",
+        "dashboard/.env.example documents VITE_RRDA_API_URL",
+        "npm run dev in dashboard/ connects to backend without manual env"
+      ],
+      "depends_on": ["GL-01"],
+      "blocked_on": null
+    },
+    {
+      "id": "GL-29",
+      "title": "Run Phase 3 SDLC audit (hard gate)",
+      "sprint": 8,
+      "status": "pending",
+      "severity": "GATE",
+      "gaps": [],
+      "branch": "none (audit is read-only)",
+      "acceptance": [
+        "All 32 audit suites (18 core + 14 web) run against post-GL-28 codebase",
+        "Results recorded in docs/engineering-spec/audit-results.md",
+        "Zero ship-blocking failures remain open",
+        "Any HIGH findings not addressed have documented exception with owner and resolution date"
+      ],
+      "depends_on": ["GL-01","GL-02","GL-03","GL-04","GL-05","GL-06","GL-07","GL-08","GL-09","GL-10","GL-11","GL-12","GL-13","GL-14","GL-15","GL-16","GL-17","GL-18","GL-19","GL-20","GL-21","GL-22","GL-23","GL-24","GL-25","GL-26","GL-27","GL-28"],
+      "blocked_on": null
+    },
+    {
+      "id": "GL-30",
+      "title": "End-to-end smoke test on docker-compose",
+      "sprint": 8,
+      "status": "pending",
+      "severity": "GATE",
+      "gaps": [],
+      "branch": "none (validation)",
+      "acceptance": [
+        "docker-compose up on clean environment starts all 3 services without error",
+        "/health returns 200",
+        "/api/v1/discoveries returns valid JSON",
+        "POST /api/v1/admin/scans with source:hn completes and stores at least 1 discovery",
+        "InnovationAgent runs at least one cycle without error",
+        "Dashboard loads in browser and displays the discovery"
+      ],
+      "depends_on": ["GL-29"],
+      "blocked_on": null
+    },
+    {
+      "id": "GL-31",
+      "title": "Push all branches and open PRs",
+      "sprint": 8,
+      "status": "pending",
+      "severity": "GATE",
+      "gaps": [],
+      "branch": "none",
+      "acceptance": [
+        "All GL branches pushed to origin",
+        "One PR per GL id with acceptance gate and GL id reference in description",
+        "PRs merged in dependency order with CI passing on each",
+        "main branch on GitHub matches final merged state"
+      ],
+      "depends_on": ["GL-30"],
+      "blocked_on": null
+    }
+  ],
+  "sprint_plan": {
+    "1": ["GL-01","GL-02","GL-03","GL-26"],
+    "2": ["GL-05","GL-06","GL-07","GL-12","GL-13"],
+    "3": ["GL-14","GL-15","GL-23"],
+    "4": ["GL-08","GL-11","GL-16","GL-19"],
+    "5": ["GL-18","GL-21","GL-22","GL-27"],
+    "6": ["GL-24","GL-25","GL-28"],
+    "7": ["GL-04","GL-09","GL-10","GL-17","GL-20"],
+    "8": ["GL-29","GL-30","GL-31"]
+  }
+}
