@@ -15,6 +15,9 @@
     "dev:scheduler": "tsx src/scheduler/index.ts",
     "test": "vitest run",
     "test:watch": "vitest",
+    "lint": "eslint .",
+    "format": "prettier --write \"**/*.{ts,json,md}\"",
+    "format:check": "prettier --check \"**/*.{ts,json,md}\"",
     "scan:github": "tsx src/scanners/run.ts github",
     "scan:hn": "tsx src/scanners/run.ts hn",
     "scan:reddit": "tsx src/scanners/run.ts reddit",
@@ -40,6 +43,7 @@
     "ws": "^8.19.0"
   },
   "devDependencies": {
+    "@eslint/js": "^9.15.0",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/node": "^20.10.5",
@@ -48,8 +52,12 @@
     "@types/nodemailer": "^6.4.14",
     "@types/pg": "^8.10.9",
     "@types/ws": "^8.18.1",
+    "eslint": "^9.15.0",
+    "eslint-config-prettier": "^9.1.0",
+    "prettier": "^3.3.3",
     "tsx": "^4.21.0",
     "typescript": "^5.3.3",
+    "typescript-eslint": "^8.15.0",
     "vitest": "^3.2.0"
   }
 }

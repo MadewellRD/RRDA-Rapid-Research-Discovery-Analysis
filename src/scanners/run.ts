@@ -31,7 +31,7 @@ if (!scanner || !['github', 'hn', 'reddit', 'arxiv', 'all'].includes(scanner)) {
 
 async function run() {
   const core = new RDACore();
-  let discoveries: any[] = [];
+  const discoveries: any[] = [];
 
   console.log(`\n🔍 Running ${scanner} scanner...\n`);
 
