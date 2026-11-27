@@ -74,7 +74,7 @@ export class ReportGenerator {
 
     levelCounts.rows.forEach(row => {
       const level = row.intelligence_level?.toLowerCase();
-      if (level && levels.hasOwnProperty(level)) {
+      if (level && Object.prototype.hasOwnProperty.call(levels, level)) {
         levels[level] = parseInt(row.count);
       }
     });
