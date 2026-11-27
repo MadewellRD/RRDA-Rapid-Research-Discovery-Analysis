@@ -1,47 +1,41 @@
 {
   "project": "RRDA",
-  "tracker": "RRDA-golive-tracker",
-  "repo": "https://github.com/MadewellRD/RRDA-Rapid-Research-Discovery-Analysis",
-  "branch": "main",
+  "schema_version": "1.0",
   "head_at_spec": "a680687",
-  "spec_date": "2026-11-26",
-  "sprints": 8,
-  "timeline": "3-4 days continuous",
-  "spec_dir": "docs/engineering-spec",
-  "phase3_gate": "pending",
-  "phase3_audit_results": "docs/engineering-spec/audit-results.md",
+  "phase3_gate": "conditional_pass",
+  "phase3_audit_date": "2026-11-26",
+  "phase3_notes": "All 32 suites run. 14 SHIP blockers identified. CONDITIONAL PASS -- Sprint 1 may begin. All SHIP blockers must pass acceptance gates before go-live.",
   "tasks": [
     {
       "id": "GL-01",
-      "title": "Push local main to origin",
+      "title": "Bootstrap engineering spec and push to origin",
       "sprint": 1,
-      "status": "pending",
-      "severity": "SHIP",
+      "status": "done",
+      "severity": "GATE",
       "gaps": [],
-      "branch": "none (direct push)",
+      "branch": "main",
       "acceptance": [
-        "git push origin main succeeds with no conflicts",
-        "GitHub Actions CI run triggers and completes",
-        "Local HEAD matches origin/main"
+        "docs/engineering-spec/ committed and pushed to origin/main",
+        "tracker.json present and schema-valid",
+        "audit-results.md present in docs/engineering-spec/"
       ],
       "depends_on": [],
       "blocked_on": null
     },
     {
       "id": "GL-02",
-      "title": "Install test framework and add baseline test suite",
+      "title": "Add Vitest test harness and baseline tests",
       "sprint": 1,
       "status": "pending",
       "severity": "SHIP",
-      "gaps": [1],
-      "branch": "gl/gl-02-test-framework",
+      "gaps": [1, 2],
+      "branch": "gl/gl-02-vitest",
       "acceptance": [
         "vitest added as devDependency",
-        "package.json has test script",
-        "Minimum 1 test file per module: pool.ts, RDACore.ts, llm/client.ts",
+        "npm test script added to package.json",
+        "Tests exist for pool.ts (singleton behavior), RDACore.ts (domain filter), llm/client.ts (factory)",
         "npm test exits 0",
-        "CI ci.yml backend job runs npm test as explicit step",
-        "Coverage threshold set at 60%"
+        "CI workflow runs npm test step"
       ],
       "depends_on": ["GL-01"],
       "blocked_on": null
@@ -52,71 +46,72 @@
       "sprint": 1,
       "status": "pending",
       "severity": "HIGH",
-      "gaps": [2],
+      "gaps": [3],
       "branch": "gl/gl-03-lint",
       "acceptance": [
-        "eslint + @typescript-eslint/eslint-plugin + prettier added as devDependencies",
-        ".eslintrc.json and .prettierrc present at repo root",
-        "package.json has lint and format scripts",
-        "npm run lint exits 0",
-        "CI ci.yml runs npm run lint"
+        "eslint and prettier added as devDependencies",
+        ".eslintrc.json and .prettierrc present",
+        "npm run lint and npm run format scripts added",
+        "npm run lint exits 0 on current codebase",
+        "CI workflow runs lint step"
       ],
       "depends_on": ["GL-01"],
       "blocked_on": null
     },
     {
       "id": "GL-04",
-      "title": "Document npm_registry scanner gap",
+      "title": "Enable pgvector extension and uncomment index",
       "sprint": 7,
       "status": "pending",
-      "severity": "MED",
-      "gaps": [3],
-      "branch": "gl/gl-04-npm-registry-doc",
+      "severity": "HIGH",
+      "gaps": [4, 5],
+      "branch": "gl/gl-04-pgvector",
       "acceptance": [
-        "schema.sql npm_registry config row has comment: scanner not yet implemented",
-        "README lists only implemented sources: GitHub, HN, Reddit, ArXiv",
-        "GitHub issue opened tracking npm_registry scanner as future feature"
+        "schema.sql includes CREATE EXTENSION IF NOT EXISTS vector",
+        "Cosine similarity index on innovation_proposals.embedding uncommented",
+        "docker-compose.yml uses pgvector/pgvector image",
+        "Migration file enables extension before index creation",
+        "InnovationAgent similarity check runs without error against seeded data"
       ],
-      "depends_on": ["GL-01"],
+      "depends_on": ["GL-12"],
       "blocked_on": null
     },
     {
       "id": "GL-05",
-      "title": "Automate pgvector setup",
+      "title": "Fix DATABASE_URL and pool connection",
       "sprint": 2,
       "status": "pending",
       "severity": "SHIP",
-      "gaps": [4, 12],
-      "branch": "gl/gl-05-pgvector",
+      "gaps": [12],
+      "branch": "gl/gl-05-db-url",
       "acceptance": [
-        "schema.sql includes CREATE EXTENSION IF NOT EXISTS vector as first DDL statement",
-        "innovation_proposals vector index uncommented and active",
-        "docker-compose.yml uses ankane/pgvector image",
-        "README documents pgvector requirement and Docker image change",
-        "npm run seed-demo completes without error"
+        ".env.example has DATABASE_URL entry",
+        "pool.ts reads DATABASE_URL with fallback to individual PG* vars",
+        "README documents both connection styles",
+        "npm run seed-demo inserts rows without connection error"
       ],
       "depends_on": ["GL-01"],
       "blocked_on": null
     },
     {
       "id": "GL-06",
-      "title": "Fix docker-compose startup race",
+      "title": "Fix docker-compose depends_on health conditions",
       "sprint": 2,
       "status": "pending",
       "severity": "SHIP",
-      "gaps": [5],
+      "gaps": [6],
       "branch": "gl/gl-06-compose-health",
       "acceptance": [
-        "api service depends_on postgres with condition: service_healthy",
-        "postgres service has healthcheck block with pg_isready",
-        "docker-compose up on cold start produces no connection refused errors"
+        "docker-compose.yml api and scheduler services use depends_on with condition: service_healthy",
+        "postgres service has healthcheck block",
+        "docker-compose up starts all services in correct order"
       ],
-      "depends_on": ["GL-05"],
+      "depends_on": ["GL-39"],
       "blocked_on": null
     },
     {
       "id": "GL-07",
-      "title": "Reconcile docker-compose LLM_PROVIDER and CORS_ORIGIN",
+      "title": "Remove hardcoded compose env overrides",
       "sprint": 2,
       "status": "pending",
       "severity": "HIGH",
@@ -531,16 +526,268 @@
       ],
       "depends_on": ["GL-30"],
       "blocked_on": null
+    },
+    {
+      "id": "GL-32",
+      "title": "Add OpenAPI specification",
+      "sprint": 7,
+      "status": "pending",
+      "severity": "MED",
+      "gaps": [],
+      "branch": "gl/gl-32-openapi",
+      "acceptance": [
+        "openapi.yaml or openapi.json present at repo root or docs/",
+        "All 15+ REST endpoints documented with request/response schemas",
+        "GET /api/v1/docs serves Swagger UI or Redoc",
+        "npm run build exits 0"
+      ],
+      "depends_on": ["GL-39"],
+      "blocked_on": null
+    },
+    {
+      "id": "GL-33",
+      "title": "Document and enforce discovery status state machine",
+      "sprint": 5,
+      "status": "pending",
+      "severity": "MED",
+      "gaps": [],
+      "branch": "gl/gl-33-status-state-machine",
+      "acceptance": [
+        "Discovery status values enumerated in src/types/index.ts as const enum or union",
+        "State transition diagram in docs/engineering-spec/index.md",
+        "getCriticalDiscoveries() filter uses typed status values",
+        "npm run build exits 0"
+      ],
+      "depends_on": ["GL-18"],
+      "blocked_on": null
+    },
+    {
+      "id": "GL-34",
+      "title": "Add PR template",
+      "sprint": 1,
+      "status": "pending",
+      "severity": "LOW",
+      "gaps": [],
+      "branch": "gl/gl-34-pr-template",
+      "acceptance": [
+        ".github/PULL_REQUEST_TEMPLATE.md present",
+        "Template includes: GL id reference, acceptance criteria checklist, test evidence, breaking change flag"
+      ],
+      "depends_on": ["GL-01"],
+      "blocked_on": null
+    },
+    {
+      "id": "GL-35",
+      "title": "Add dashboard test framework",
+      "sprint": 2,
+      "status": "pending",
+      "severity": "SHIP",
+      "gaps": [],
+      "branch": "gl/gl-35-dashboard-tests",
+      "acceptance": [
+        "vitest and @testing-library/react added to dashboard/package.json devDependencies",
+        "dashboard/package.json has test script",
+        "At least 3 component tests covering IntelligenceFeed, AdminPanel, and Dashboard routing",
+        "npm test in dashboard/ exits 0",
+        "CI workflow runs dashboard test step"
+      ],
+      "depends_on": ["GL-41"],
+      "blocked_on": null
+    },
+    {
+      "id": "GL-36",
+      "title": "Add rate limiting to admin API endpoints",
+      "sprint": 2,
+      "status": "pending",
+      "severity": "SHIP",
+      "gaps": [],
+      "branch": "gl/gl-36-admin-rate-limit",
+      "acceptance": [
+        "express-rate-limit or equivalent applied to all /api/v1/admin/* routes",
+        "Max 20 requests per minute per IP on admin routes",
+        "429 response with Retry-After header on limit exceeded",
+        "Rate limit behavior covered by integration test"
+      ],
+      "depends_on": ["GL-02"],
+      "blocked_on": null
+    },
+    {
+      "id": "GL-37",
+      "title": "Add dependency vulnerability scanning",
+      "sprint": 2,
+      "status": "pending",
+      "severity": "SHIP",
+      "gaps": [],
+      "branch": "gl/gl-37-dep-scanning",
+      "acceptance": [
+        "npm audit --audit-level=high step added to CI workflow",
+        "Dependabot config (.github/dependabot.yml) present for npm ecosystem",
+        "CI fails on high or critical vulnerabilities",
+        "Current audit passes or known issues documented with exception"
+      ],
+      "depends_on": ["GL-01"],
+      "blocked_on": null
+    },
+    {
+      "id": "GL-38",
+      "title": "Add CHANGELOG and v2.0.0 semver tag",
+      "sprint": 8,
+      "status": "pending",
+      "severity": "LOW",
+      "gaps": [],
+      "branch": "gl/gl-38-changelog",
+      "acceptance": [
+        "CHANGELOG.md present at repo root following Keep a Changelog format",
+        "v2.0.0 git tag created and pushed to origin",
+        "README badges reference tagged release"
+      ],
+      "depends_on": ["GL-29"],
+      "blocked_on": null
+    },
+    {
+      "id": "GL-39",
+      "title": "Add GET /health endpoint",
+      "sprint": 2,
+      "status": "pending",
+      "severity": "MED",
+      "gaps": [],
+      "branch": "gl/gl-39-health-endpoint",
+      "acceptance": [
+        "GET /health returns 200 with JSON body {status: 'ok', timestamp: ISO8601}",
+        "DB connectivity check included in health response",
+        "docker-compose.yml healthcheck uses /health endpoint",
+        "Unit test verifies /health returns 200"
+      ],
+      "depends_on": ["GL-02"],
+      "blocked_on": null
+    },
+    {
+      "id": "GL-40",
+      "title": "Add structured logging with pino",
+      "sprint": 5,
+      "status": "pending",
+      "severity": "MED",
+      "gaps": [],
+      "branch": "gl/gl-40-structured-logging",
+      "acceptance": [
+        "pino added as dependency",
+        "src/logger.ts singleton exports typed logger",
+        "All console.log and console.error calls replaced with logger.info/logger.error",
+        "LOG_LEVEL env var controls verbosity",
+        "npm run build exits 0"
+      ],
+      "depends_on": ["GL-02"],
+      "blocked_on": null
+    },
+    {
+      "id": "GL-41",
+      "title": "Pin dashboard TypeScript to stable release",
+      "sprint": 1,
+      "status": "pending",
+      "severity": "SHIP",
+      "gaps": [],
+      "branch": "gl/gl-41-dashboard-ts-pin",
+      "acceptance": [
+        "dashboard/package.json typescript devDependency changed from ^6.0.2 to ^5.7.0",
+        "npm install in dashboard/ resolves without pre-release packages",
+        "npm run build in dashboard/ exits 0"
+      ],
+      "depends_on": ["GL-01"],
+      "blocked_on": null
+    },
+    {
+      "id": "GL-42",
+      "title": "Add security headers via helmet",
+      "sprint": 2,
+      "status": "pending",
+      "severity": "SHIP",
+      "gaps": [],
+      "branch": "gl/gl-42-helmet",
+      "acceptance": [
+        "helmet added as dependency",
+        "app.use(helmet()) applied before route registration in app.ts",
+        "CSP, X-Frame-Options, X-Content-Type-Options headers present in responses",
+        "npm run build exits 0",
+        "Integration test verifies security headers present"
+      ],
+      "depends_on": ["GL-02"],
+      "blocked_on": null
+    },
+    {
+      "id": "GL-43",
+      "title": "Restrict CORS to configured origins",
+      "sprint": 4,
+      "status": "pending",
+      "severity": "MED",
+      "gaps": [],
+      "branch": "gl/gl-43-cors-origins",
+      "acceptance": [
+        "CORS_ORIGINS env var added to .env.example",
+        "cors() in app.ts uses origin: process.env.CORS_ORIGINS?.split(',') with no wildcard fallback in production",
+        "README documents CORS configuration",
+        "Integration test verifies CORS headers for allowed and disallowed origins"
+      ],
+      "depends_on": ["GL-07"],
+      "blocked_on": null
+    },
+    {
+      "id": "GL-44",
+      "title": "Add code splitting to dashboard",
+      "sprint": 7,
+      "status": "pending",
+      "severity": "LOW",
+      "gaps": [],
+      "branch": "gl/gl-44-code-splitting",
+      "acceptance": [
+        "Dashboard view components extracted from App.tsx using React.lazy",
+        "Suspense boundary wraps lazy-loaded routes",
+        "npm run build in dashboard/ produces multiple chunks",
+        "Dashboard loads correctly in browser with no console errors"
+      ],
+      "depends_on": ["GL-46"],
+      "blocked_on": null
+    },
+    {
+      "id": "GL-45",
+      "title": "Add lang attribute to dashboard HTML",
+      "sprint": 6,
+      "status": "pending",
+      "severity": "LOW",
+      "gaps": [],
+      "branch": "gl/gl-45-html-lang",
+      "acceptance": [
+        "dashboard/index.html <html> element has lang=\"en\" attribute",
+        "WCAG 2.1 SC 3.1.1 requirement met"
+      ],
+      "depends_on": ["GL-01"],
+      "blocked_on": null
+    },
+    {
+      "id": "GL-46",
+      "title": "Add React error boundary to dashboard",
+      "sprint": 2,
+      "status": "pending",
+      "severity": "SHIP",
+      "gaps": [],
+      "branch": "gl/gl-46-error-boundary",
+      "acceptance": [
+        "ErrorBoundary component implemented in dashboard/src/components/ErrorBoundary.tsx",
+        "ErrorBoundary wraps top-level App render in dashboard/src/main.tsx",
+        "Fallback UI shows error message and reload prompt",
+        "Unit test verifies ErrorBoundary catches render errors without crashing"
+      ],
+      "depends_on": ["GL-35"],
+      "blocked_on": null
     }
   ],
   "sprint_plan": {
-    "1": ["GL-01","GL-02","GL-03","GL-26"],
-    "2": ["GL-05","GL-06","GL-07","GL-12","GL-13"],
+    "1": ["GL-01","GL-02","GL-03","GL-26","GL-34","GL-41"],
+    "2": ["GL-05","GL-06","GL-07","GL-12","GL-13","GL-35","GL-36","GL-37","GL-39","GL-42","GL-46"],
     "3": ["GL-14","GL-15","GL-23"],
-    "4": ["GL-08","GL-11","GL-16","GL-19"],
-    "5": ["GL-18","GL-21","GL-22","GL-27"],
-    "6": ["GL-24","GL-25","GL-28"],
-    "7": ["GL-04","GL-09","GL-10","GL-17","GL-20"],
-    "8": ["GL-29","GL-30","GL-31"]
+    "4": ["GL-08","GL-11","GL-16","GL-19","GL-43"],
+    "5": ["GL-18","GL-21","GL-22","GL-27","GL-33","GL-40"],
+    "6": ["GL-24","GL-25","GL-28","GL-45"],
+    "7": ["GL-04","GL-09","GL-10","GL-17","GL-20","GL-32","GL-44"],
+    "8": ["GL-29","GL-30","GL-31","GL-38"]
   }
 }
